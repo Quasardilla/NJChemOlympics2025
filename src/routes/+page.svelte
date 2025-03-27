@@ -23,12 +23,13 @@
         scene.fog = new THREE.Fog(0x87CEEB, 50, 200); // Add fog for depth perception
         
         // Add darkness toggle
-        const enableDarkness = false; // Toggle this to enable/disable darkness effect
+        const enableDarkness = true; // Toggle this to enable/disable darkness effect
         
         let width = window.innerWidth;
         let height = window.innerHeight;
     
         const camera = new THREE.PerspectiveCamera(75, width/height, 0.1, 10000);
+
         
         const renderer = new THREE.WebGLRenderer({
           canvas: document.querySelector('#bg'),
@@ -76,9 +77,10 @@
         const sunMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
         const sun = new THREE.Mesh(sunGeometry, sunMaterial);
         sun.position.set(-450, 50, -500);
-        scene.add(sun);
+        // scene.add(sun);
 
         const flare_light = new THREE.PointLight(0xffffff, 2, 500);
+        flare_light.position.set(-450, 50, -500);
         const textureLoader = new THREE.TextureLoader();
         const lensflare = new Lensflare();
 
@@ -154,6 +156,31 @@
           });
         }
 
+        // Create floating ship
+        const shipGeometry = new THREE.BoxGeometry(100, 20, 75); // Made ship bigger
+        const shipMaterial = new THREE.MeshStandardMaterial({ 
+          color: 0x8B4513,
+          roughness: 0.8,
+          metalness: 0.2,
+          emissive: 0x8B4513, // Add emissive color to maintain base color
+          emissiveIntensity: 0.2, // Slight glow to maintain visibility
+          fog: false // Disable fog effect on the ship
+        });
+        const ship = new THREE.Mesh(shipGeometry, shipMaterial);
+        ship.position.set(0, 5, -200); // Moved ship further back
+        ship.renderOrder = 1; // Ensure ship renders after the ocean
+        scene.add(ship);
+
+        // Add ship to floating objects for wave movement
+        floatingObjects.push({
+          mesh: ship,
+          speed: 0.2,
+          initialX: ship.position.x,
+          initialZ: ship.position.z,
+          movementOffset: 0,
+          isShip: true
+        });
+
         // Create scattered items on seabed
         const seabedItems = [];
         const numSeabedItems = 20;
@@ -194,7 +221,8 @@
         const oceanMaterial = new THREE.ShaderMaterial({
           uniforms: {
             time: { value: 0 },
-            color: { value: new THREE.Color(0x0077ff) }
+            color: { value: new THREE.Color(0x0077ff) },
+            darkness: { value: 0 } // Add darkness uniform
           },
           vertexShader: `
             uniform float time;
@@ -221,15 +249,20 @@
           `,
           fragmentShader: `
             uniform vec3 color;
+            uniform float darkness;
             varying vec2 vUv;
             varying float vHeight;
             void main() {
-              // Base color
-              vec3 baseColor = vec3(0.0, 0.47, 1.0); // Blue
+              // Base colors for different lighting conditions
+              vec3 dayColor = vec3(0.0, 0.47, 1.0);    // Bright blue
+              vec3 nightColor = vec3(0.0, 0.2, 0.4);   // Dark blue
+              
+              // Mix between day and night colors based on darkness
+              vec3 baseColor = mix(dayColor, nightColor, darkness);
               
               // Add darker color for wave troughs and lighter for peaks
-              vec3 darkColor = vec3(0.0, 0.3, 0.8);  // Darker blue
-              vec3 lightColor = vec3(0.2, 0.6, 1.0); // Lighter blue
+              vec3 darkColor = baseColor * 0.8;
+              vec3 lightColor = baseColor * 1.2;
               
               // Mix colors based on wave height
               vec3 finalColor = mix(darkColor, lightColor, (vHeight + 4.5) / 9.0);
@@ -283,26 +316,31 @@
             const sunPhasePercentage = 0.5;
             const sunPhase = Math.min(scrollProgress / sunPhasePercentage, 1);
             
-            // Sun movement from left to right
+            // Sun movement from left to right, stopping at noon (x=0)
             const startX = -450;
-            const endX = 450;
+            const endX = 0; // Changed from 450 to 0 to stop at noon
             const sunX = startX + (endX - startX) * sunPhase;
             
-            // Sun height movement (up and down)
+            // Sun height movement (up and down) with easing
             const baseHeight = 100;
-            const heightVariation = 75;
-            const sunY = baseHeight + Math.sin(sunPhase * Math.PI) * heightVariation;
+            const heightVariation = 200;
+            const easing = t => t * t * (3 - 2 * t); // Smooth easing function
+            const easedPhase = easing(sunPhase);
+            // Modified to only go up to noon (half of the sine wave)
+            const sunY = baseHeight + Math.sin(easedPhase * Math.PI * 0.5) * heightVariation;
             
-            sun.position.set(sunX, sunY, sun.position.z);
-            flare_light.position.set(sunX, sunY, sun.position.z + 10);
+            // sun.position.set(sunX, sunY, sun.position.z);
+            flare_light.position.set(sunX, sunY, sun.position.z - 700);
             
+            // console.log(camera.position.y);
             //if camera position is below the sea level then hide the sun, and readd it when it goes back above
-            if (sunPhase == 1) {
-                scene.remove(sun);
+            if (camera.position.y <= 0) {
+                // console.log("remove sun");
+                // scene.remove(sun);
                 scene.remove(flare_light);
             } else {
-                if (!scene.children.includes(sun)) {
-                    scene.add(sun);
+                if (!scene.children.includes(flare_light)) {
+                    // scene.add(sun);
                     scene.add(flare_light);
                 }
             }
@@ -314,7 +352,7 @@
             camera.rotation.x = -Math.PI / 8;
             
             // Update lighting and background based on sun position
-            const darkness = enableDarkness ? Math.abs(Math.sin((sunPhase) * Math.PI - Math.PI/2)) : 0;
+            const darkness = enableDarkness ? Math.abs(Math.sin((sunPhase/2) * Math.PI - Math.PI/2)) : 0;
             
             scene.background = new THREE.Color(0x87CEEB).lerp(new THREE.Color(0x000033), darkness);
             ambientLight.intensity = 0.5 * (1 - darkness);
@@ -323,11 +361,24 @@
             // Update fog based on sun position
             scene.fog.density = 0.001 + (darkness * 0.002);
 
+            // Update ocean darkness
+            oceanMaterial.uniforms.darkness.value = darkness;
+
             // Move floating objects independently based on scroll
             floatingObjects.forEach(obj => {
-              const movement = Math.sin(scrollProgress * Math.PI * 2 + obj.movementOffset) * 20;
-              obj.mesh.position.x = obj.initialX + movement;
-              obj.mesh.position.z = obj.initialZ + movement;
+              // Add wave-based rotation for the ship
+              if (obj.isShip) {
+                if (camera.position.y >= 0) {
+                  const movement = Math.sin(scrollProgress * Math.PI * 2 + obj.movementOffset) * 100;
+                  obj.mesh.position.x = obj.initialX + movement;
+                  obj.mesh.position.z = obj.initialZ + movement;
+                }
+              } else {
+                const movement = Math.sin(scrollProgress * Math.PI * 2 + obj.movementOffset) * 20;
+                obj.mesh.position.x = obj.initialX + movement;
+                obj.mesh.position.z = obj.initialZ + movement;
+              }
+              
             });
         }
         
@@ -342,6 +393,19 @@
             oceanMaterial.uniforms.time.value = time;
             
             // Remove rotation of floating objects
+
+            // Move floating objects independently based on scroll
+            floatingObjects.forEach(obj => {
+              // Add wave-based rotation for the ship
+              if (obj.isShip) {
+                // Added continuous wave movement independent of scroll
+                const time = performance.now() * 0.001;
+                const waveRotation = Math.sin(time * 2 + obj.movementOffset) * 0.1;
+                obj.mesh.rotation.z = waveRotation;
+                obj.mesh.rotation.x = Math.sin(time * 1.5 + obj.movementOffset) * 0.05;
+              }
+            });
+
             
             renderer.render(scene, camera);
         }
