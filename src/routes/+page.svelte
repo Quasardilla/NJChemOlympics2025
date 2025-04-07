@@ -9,6 +9,8 @@
     import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
     import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader'
     import { Lensflare, LensflareElement } from 'three/examples/jsm/objects/Lensflare.js';
+    import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
+    import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
     
     import { onMount } from 'svelte';
     import Carousel from '../sections/carousel.svelte';
@@ -166,20 +168,82 @@
           emissiveIntensity: 0.2, // Slight glow to maintain visibility
           fog: false // Disable fog effect on the ship
         });
-        const ship = new THREE.Mesh(shipGeometry, shipMaterial);
-        ship.position.set(0, 5, -200); // Moved ship further back
-        ship.renderOrder = 1; // Ensure ship renders after the ocean
-        scene.add(ship);
+        const shipMesh = new THREE.Mesh(shipGeometry, shipMaterial);
+        shipMesh.position.set(0, 5, -200); // Moved ship further back
+        scene.add(shipMesh);
 
         // Add ship to floating objects for wave movement
         floatingObjects.push({
-          mesh: ship,
+          mesh: shipMesh,
           speed: 0.2,
-          initialX: ship.position.x,
-          initialZ: ship.position.z,
+          initialX: shipMesh.position.x,
+          initialZ: shipMesh.position.z,
+          initialShipX: shipMesh.position.x,
+          initialShipZ: shipMesh.position.z,
           movementOffset: 0,
           isShip: true
         });
+
+
+
+        //add text on ship
+        const loader = new FontLoader();
+        
+        loader.load('/font.json', function (font) {
+          const textGeometry = new TextGeometry('Microplastics', {
+            font: font,
+            size: 10,
+            height: 1,
+            curveSegments: 12,
+            bevelEnabled: true,
+            bevelThickness: 0.5,
+            bevelSize: 0.5,
+            bevelOffset: 0,
+            bevelSegments: 5
+          });
+          const textMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, fog:false });// Black color
+          const titleMesh = new THREE.Mesh(textGeometry, textMaterial);
+          titleMesh.position.set(-30, 30, -150); // Adjust position
+          scene.add(titleMesh);
+
+
+
+          // Add title to floating objects for wave movement
+          floatingObjects.push({
+            mesh: titleMesh,
+            speed: 0.2,
+            initialX: titleMesh.position.x,
+            initialZ: titleMesh.position.z,
+            initialShipX: shipMesh.position.x,
+            initialShipZ: shipMesh.position.z,
+            movementOffset: 0,
+            isShip: true
+          });
+        });
+
+
+        //add a backdrop to the text
+        const backdropGeometry = new THREE.BoxGeometry(120, 40, 1);
+        const backdropMaterial = new THREE.MeshStandardMaterial({ color: 0x000000, fog:false });// Black color
+        const backdropMesh = new THREE.Mesh(backdropGeometry, backdropMaterial);
+        backdropMesh.position.set(-30, 30, -200); // Adjust position
+        scene.add(backdropMesh);
+        // Add backdrop to floating objects for wave movement
+        floatingObjects.push({
+          mesh: backdropMesh,
+          speed: 0.2,
+          initialX: backdropMesh.position.x,
+          initialZ: backdropMesh.position.z,
+          initialShipX: shipMesh.position.x,
+          initialShipZ: shipMesh.position.z,
+          movementOffset: 0,
+          isShip: true
+        });
+
+
+
+
+
 
         // Create scattered items on seabed
         const seabedItems = [];
@@ -267,10 +331,10 @@
               // Mix colors based on wave height
               vec3 finalColor = mix(darkColor, lightColor, (vHeight + 4.5) / 9.0);
               
-              // Add slight transparency variation based on height
-              float alpha = 0.8 + (vHeight + 4.5) / 18.0;
-              
-              gl_FragColor = vec4(finalColor, alpha);
+              // Darken color based on height (lower = darker)
+              finalColor *= 0.5 + (vHeight + 4.5) / 9.0;
+            
+              gl_FragColor = vec4(finalColor, 1.0); // Keep alpha constant
             }
           `,
           transparent: true
@@ -370,8 +434,8 @@
               if (obj.isShip) {
                 if (camera.position.y >= 0) {
                   const movement = Math.sin(scrollProgress * Math.PI * 2 + obj.movementOffset) * 100;
-                  obj.mesh.position.x = obj.initialX + movement;
-                  obj.mesh.position.z = obj.initialZ + movement;
+                  obj.mesh.position.x = obj.initialShipX + movement;
+                  obj.mesh.position.z = obj.initialShipZ + movement;
                 }
               } else {
                 const movement = Math.sin(scrollProgress * Math.PI * 2 + obj.movementOffset) * 20;
@@ -428,15 +492,17 @@
     
         var acc = document.getElementsByClassName("accordion");
   
-        acc[0].addEventListener("click", function() {
-          this.classList.toggle("active");
-          var text = this.nextElementSibling;
-          if (text.style.maxHeight) {
-          text.style.maxHeight = null;
-          } else {
-          text.style.maxHeight = text.scrollHeight + "px";
-          } 
-        });
+
+        //uncomment for accordion
+        // acc[0].addEventListener("click", function() {
+        //   this.classList.toggle("active");
+        //   var text = this.nextElementSibling;
+        //   if (text.style.maxHeight) {
+        //   text.style.maxHeight = null;
+        //   } else {
+        //   text.style.maxHeight = text.scrollHeight + "px";
+        //   } 
+        // });
         
         // });
 
@@ -525,6 +591,7 @@
         background-color: transparent;
     }
 
+/*
     .landing-container {
         position: relative;
         width: auto;
@@ -578,4 +645,5 @@
         background-color: #ccc;
         border-radius: 1rem;
     }
+        */ 
 </style>
