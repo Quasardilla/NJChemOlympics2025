@@ -20,6 +20,39 @@
         const oceanDepth = 200;
         const sunPhasePercentage = 0.2;
 
+
+        let raycaster = new THREE.Raycaster();
+        let mouse = new THREE.Vector2();
+
+        function onMouseMove(event) {
+            // calculate mouse position in normalized device coordinates
+            // (-1 to +1) for both components
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        }
+
+        window.addEventListener('mousemove', onMouseMove);
+
+        function onMouseUp(event) {
+          // raycast to see which link was clicked
+          raycaster.setFromCamera(mouse, camera);
+          const intersects = raycaster.intersectObjects(
+            floatingObjects.map(obj => (obj.isFloatingText && obj.isLink) ? obj.hitbox : null).filter(Boolean)
+          );
+          if (intersects.length > 0) {
+            const intersectedItem = intersects[0].object;
+            const linkedObject = floatingObjects.find(obj => obj.hitbox === intersectedItem);
+            if (linkedObject) {
+              // redirect to the link
+              window.location.href = linkedObject.link;
+            }
+          }
+        }
+
+        window.addEventListener('mouseup', onMouseUp);
+
+
+
     
         // IMPORTS
         // import './style.css';
@@ -412,21 +445,48 @@
               movementOffset: THREE.MathUtils.randFloat(0, Math.PI * 2),
               depth: depth,
               isFloatingText: true,
+              isLink: Math.random() < 1,//random link idk bro testing
+              link: "https://www.nationalgeographic.com/environment/article/what-is-geothermal-energy",
+              hitboxOffset: (() => {
+
+                textGeometry.computeBoundingBox();
+                let hitboxOffset = new THREE.Vector3(0, 0, 0);
+                textGeometry.boundingBox.getCenter(hitboxOffset);
+                console.log(hitboxOffset);
+                return hitboxOffset;
+              })(),
+              hitbox: (() => {
+
+                let size = new THREE.Vector3(0, 0, 0);
+                textGeometry.computeBoundingBox();
+                textGeometry.boundingBox.getSize(size);
+
+                const hitboxGeometry = new THREE.BoxGeometry(size.x, size.y, size.z); // Adjust size as needed
+                const hitboxMaterial = new THREE.MeshBasicMaterial({ visible: true, opacity: 0.5, transparent: true }); // Invisible hitbox
+                const hitboxMesh = new THREE.Mesh(hitboxGeometry, hitboxMaterial);
+                hitboxMesh.position.copy(textMesh.position);
+
+                scene.add(hitboxMesh);
+                return hitboxMesh;
+              })(),
               updatePos: function (scroll) {
-                
                 // only move if scroll is near the depth value
                 const padding = 0.2;
                 const calcScroll = Math.max(0, (scroll-sunPhasePercentage) / (1 - sunPhasePercentage));
-                console.log("calcscroll: "+calcScroll);
+                // console.log("calcscroll: "+calcScroll);
                 if (calcScroll < this.depth - padding || calcScroll > this.depth + padding) {
-                  console.log("not in range: "+this.depth);
+                  // console.log("not in range: "+this.depth);
                   return;
                 }
                 // move the text right to left based on scroll in range
                 const movePercent = (calcScroll - (this.depth - padding)) / ((this.depth + padding) - (this.depth - padding));
-                console.log("movePercent: "+movePercent+" calcscroll: "+calcScroll+" depth: "+((this.depth + padding) - (this.depth - padding)));
+                // console.log("movePercent: "+movePercent+" calcscroll: "+calcScroll+" depth: "+((this.depth + padding) - (this.depth - padding)));
                 this.mesh.position.x = this.initialX - (movePercent * 400);
-                
+
+                let newPos = this.mesh.position.clone();
+                newPos.add(this.hitboxOffset);
+                this.hitbox.position.copy(newPos); // Sync hitbox position with text
+                console.log("newPos: "+newPos);
               },
             });
           });
@@ -539,6 +599,28 @@
                 obj.update(); // Update custom behavior for objects like the text
               }
             });
+
+
+
+            //raycasting
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(
+              floatingObjects.map(obj => (obj.isFloatingText && obj.isLink) ? obj.hitbox : null).filter(Boolean)
+            );
+            if (intersects.length > 0) {
+              const intersectedItem = intersects[0].object;
+              const linkedObject = floatingObjects.find(obj => obj.hitbox === intersectedItem);
+              if (linkedObject) {
+                linkedObject.mesh.material.color.set(0x00ff00); // Change color on hover
+              }
+            } else {
+              floatingObjects.forEach(item => {
+                if (item.isFloatingText && item.isLink) {
+                  item.mesh.material.color.set(0xff0000); // Reset color
+                }
+              });
+            }
+
 
             
             renderer.render(scene, camera);
