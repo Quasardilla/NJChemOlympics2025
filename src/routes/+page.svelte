@@ -18,6 +18,8 @@
 
 
         const oceanDepth = 200;
+        const sunPhasePercentage = 0.2;
+
     
         // IMPORTS
         // import './style.css';
@@ -369,6 +371,66 @@
         const trash = new THREE.Mesh(trashGeometry, trashMaterial);
         trash.position.set(0, -45, 0);
         scene.add(trash);
+
+        // Add floating objects with text at different depths
+        const textDepths = [0.3, 0.6, 0.9]; // 30%, 60%, 90% below water
+        const textLabels = ['30% Below Water', '60% Below Water', '90% Below Water'];
+
+        textDepths.forEach((depth, index) => {
+          const loader = new FontLoader();
+          loader.load('/font.json', function (font) {
+            const textGeometry = new TextGeometry(textLabels[index], {
+              font: font,
+              size: 5,
+              height: 1,
+              curveSegments: 12,
+              bevelEnabled: true,
+              bevelThickness: 0.5,
+              bevelSize: 0.3,
+              bevelSegments: 5,
+            });
+
+            const textMaterial = new THREE.MeshStandardMaterial({
+              color: 0xffffff,
+              fog: false,
+            });
+
+            const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+            textMesh.position.set(
+              200, // Random horizontal position
+              -oceanDepth * depth, // Depth based on percentage
+              -50 // Random horizontal position
+            );
+            scene.add(textMesh);
+
+            // Add movement behavior for the text
+            floatingObjects.push({
+              mesh: textMesh,
+              speed: THREE.MathUtils.randFloat(0.1, 0.3),
+              initialX: textMesh.position.x,
+              initialZ: textMesh.position.z,
+              movementOffset: THREE.MathUtils.randFloat(0, Math.PI * 2),
+              depth: depth,
+              isFloatingText: true,
+              updatePos: function (scroll) {
+                
+                // only move if scroll is near the depth value
+                const padding = 0.2;
+                const calcScroll = Math.max(0, (scroll-sunPhasePercentage) / (1 - sunPhasePercentage));
+                console.log("calcscroll: "+calcScroll);
+                if (calcScroll < this.depth - padding || calcScroll > this.depth + padding) {
+                  console.log("not in range: "+this.depth);
+                  return;
+                }
+                // move the text right to left based on scroll in range
+                const movePercent = (calcScroll - (this.depth - padding)) / ((this.depth + padding) - (this.depth - padding));
+                console.log("movePercent: "+movePercent+" calcscroll: "+calcScroll+" depth: "+((this.depth + padding) - (this.depth - padding)));
+                this.mesh.position.x = this.initialX - (movePercent * 400);
+                
+              },
+            });
+          });
+        }); 
         
         // ON SCROLL 
         function moveCamera() {
@@ -380,7 +442,6 @@
             const scrollProgress = Math.abs(t) / (mainHeight - windowHeight);
             
             // Sun movement phase (first 30% of scroll)
-            const sunPhasePercentage = 0.5;
             const sunPhase = Math.min(scrollProgress / sunPhasePercentage, 1);
             
             // Sun movement from left to right, stopping at noon (x=0)
@@ -440,12 +501,15 @@
                   obj.mesh.position.x = obj.initialShipX + movement;
                   obj.mesh.position.z = obj.initialShipZ + movement;
                 }
+              } else if (obj.isFloatingText) {
+                obj.updatePos(scrollProgress); 
               } else {
                 const movement = Math.sin(scrollProgress * Math.PI * 2 + obj.movementOffset) * 20;
                 obj.mesh.position.x = obj.initialX + movement;
                 obj.mesh.position.z = obj.initialZ + movement;
               }
               
+
             });
         }
         
@@ -470,6 +534,9 @@
                 const waveRotation = Math.sin(time * 2 + obj.movementOffset) * 0.1;
                 obj.mesh.rotation.z = waveRotation;
                 obj.mesh.rotation.x = Math.sin(time * 1.5 + obj.movementOffset) * 0.05;
+              }
+              if (obj.update) {
+                obj.update(); // Update custom behavior for objects like the text
               }
             });
 
