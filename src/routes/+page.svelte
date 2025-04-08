@@ -15,6 +15,9 @@
     import { onMount } from 'svelte';
     import Carousel from '../sections/carousel.svelte';
     onMount(() => {
+
+
+        const oceanDepth = 200;
     
         // IMPORTS
         // import './style.css';
@@ -261,7 +264,7 @@
           // Random position on seabed
           item.position.set(
             THREE.MathUtils.randFloatSpread(180),
-            -48, // Just above the seabed
+            -oceanDepth + 2, // Just above the seabed
             THREE.MathUtils.randFloatSpread(180)
           );
           
@@ -353,7 +356,7 @@
         });
         const floor = new THREE.Mesh(floorGeometry, floorMaterial);
         floor.rotation.x = -Math.PI / 2;
-        floor.position.y = -50;
+        floor.position.y = -oceanDepth;
         scene.add(floor);
 
         // Plastic trash
@@ -411,7 +414,7 @@
 
             // Camera movement phase (after sun movement, last 70% of scroll)
             const cameraPhase = Math.max(0, (scrollProgress - sunPhasePercentage) / (1 - sunPhasePercentage));
-            const maxDepth = 90; // Maximum depth (just above sea floor)
+            const maxDepth = oceanDepth + 40; // Maximum depth (just above sea floor)
             camera.position.y = -cameraPhase * maxDepth + 50;
             camera.rotation.x = -Math.PI / 8;
             
