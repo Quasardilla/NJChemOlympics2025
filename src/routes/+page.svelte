@@ -407,9 +407,60 @@
 
         // Add floating objects with text at different depths
         const textDepths = [0.3, 0.6, 0.9]; // 30%, 60%, 90% below water
-        const textLabels = ['30% Below Water', '60% Below Water', '90% Below Water'];
+        const textLabels = ['30% Below Water', '60% Below Water', 'submarine'];
 
         textDepths.forEach((depth, index) => {
+
+          if (textLabels[index] == "submarine") {
+
+            
+            //add a submarine mesh as a text
+            const submarineGeometry = new THREE.BoxGeometry(100, 50, 50); 
+            const submarineMaterial = new THREE.MeshStandardMaterial({ 
+              color: 0x8B4513,
+              roughness: 0.8,
+              metalness: 0.2,
+              emissive: 0x8B4513, // Add emissive color to maintain base color
+              emissiveIntensity: 0.2, // Slight glow to maintain visibility
+              fog: false // Disable fog effect on the ship
+            });
+            const submarineMesh = new THREE.Mesh(submarineGeometry, submarineMaterial);
+            submarineMesh.position.set(200, -oceanDepth * depth, -100); // Moved submarine further back
+            scene.add(submarineMesh);
+
+
+            // Add submarine to floating objects for wave movement
+            floatingObjects.push({
+              mesh: submarineMesh,
+              speed: 0.2,
+              initialX: submarineMesh.position.x,
+              initialZ: submarineMesh.position.z,
+              depth: depth,
+              isSubmarine: true,
+              updatePos: function (scroll) {
+                // only move if scroll is near the depth value
+                const padding = 0.2;
+                const calcScroll = Math.max(0, (scroll-sunPhasePercentage) / (1 - sunPhasePercentage));
+                // console.log("calcscroll: "+calcScroll);
+                if (calcScroll < this.depth - padding || calcScroll > this.depth + padding) {
+                  // console.log("not in range: "+this.depth);
+                  return;
+                }
+                // move the text right to left based on scroll in range
+                const movePercent = (calcScroll - (this.depth - padding)) / ((this.depth + padding) - (this.depth - padding));
+                console.log("movePercent: "+movePercent+" calcscroll: "+calcScroll+" depth: "+((this.depth + padding) - (this.depth - padding)));
+                this.mesh.position.x = this.initialX - (movePercent * 200);              
+              }
+            });
+
+            
+            
+            return;
+          }
+
+
+
+
           const loader = new FontLoader();
           loader.load('/font.json', function (font) {
             const textGeometry = new TextGeometry(textLabels[index], {
@@ -452,7 +503,7 @@
                 textGeometry.computeBoundingBox();
                 let hitboxOffset = new THREE.Vector3(0, 0, 0);
                 textGeometry.boundingBox.getCenter(hitboxOffset);
-                console.log(hitboxOffset);
+                // console.log(hitboxOffset);
                 return hitboxOffset;
               })(),
               hitbox: (() => {
@@ -486,7 +537,7 @@
                 let newPos = this.mesh.position.clone();
                 newPos.add(this.hitboxOffset);
                 this.hitbox.position.copy(newPos); // Sync hitbox position with text
-                console.log("newPos: "+newPos);
+                // console.log("newPos: "+newPos);
               },
             });
           });
@@ -561,7 +612,7 @@
                   obj.mesh.position.x = obj.initialShipX + movement;
                   obj.mesh.position.z = obj.initialShipZ + movement;
                 }
-              } else if (obj.isFloatingText) {
+              } else if (obj.isFloatingText || obj.isSubmarine) {
                 obj.updatePos(scrollProgress); 
               } else {
                 const movement = Math.sin(scrollProgress * Math.PI * 2 + obj.movementOffset) * 20;
