@@ -19,6 +19,7 @@
 
         const oceanDepth = 200;
         const sunPhasePercentage = 0.2;
+        const oceanPhasePercentage = 0.5;
 
 
         let raycaster = new THREE.Raycaster();
@@ -405,6 +406,34 @@
         trash.position.set(0, -45, 0);
         scene.add(trash);
 
+
+        function updatePos(scroll) {
+          // only move if scroll is near the depth value
+          const padding = 0.2;
+          const calcScroll = Math.min(1, Math.max(0, (scroll-sunPhasePercentage) / (oceanPhasePercentage)));
+          // console.log("calcscroll: "+calcScroll);
+          if (calcScroll < this.depth - padding || calcScroll > this.depth + padding) {
+            // console.log("not in range: "+this.depth);
+            return;
+          }
+          // move the text right to left based on scroll in range
+          const movePercent = (calcScroll - (this.depth - padding)) / ((this.depth + padding) - (this.depth - padding));
+          // console.log("movePercent: "+movePercent+" calcscroll: "+calcScroll+" depth: "+((this.depth + padding) - (this.depth - padding)));
+
+          if (this.isSubmarine) {
+            this.mesh.position.x = this.initialX - (movePercent * 200);
+          } else {
+            this.mesh.position.x = this.initialX - (movePercent * 400);
+  
+            let newPos = this.mesh.position.clone();
+            newPos.add(this.hitboxOffset);
+            this.hitbox.position.copy(newPos); // Sync hitbox position with text
+            // console.log("newPos: "+newPos);
+          }
+
+        }
+
+
         // Add floating objects with text at different depths
         const textDepths = [0.3, 0.6, 0.9]; // 30%, 60%, 90% below water
         const textLabels = ['30% Below Water', '60% Below Water', 'submarine'];
@@ -437,20 +466,7 @@
               initialZ: submarineMesh.position.z,
               depth: depth,
               isSubmarine: true,
-              updatePos: function (scroll) {
-                // only move if scroll is near the depth value
-                const padding = 0.2;
-                const calcScroll = Math.max(0, (scroll-sunPhasePercentage) / (1 - sunPhasePercentage));
-                // console.log("calcscroll: "+calcScroll);
-                if (calcScroll < this.depth - padding || calcScroll > this.depth + padding) {
-                  // console.log("not in range: "+this.depth);
-                  return;
-                }
-                // move the text right to left based on scroll in range
-                const movePercent = (calcScroll - (this.depth - padding)) / ((this.depth + padding) - (this.depth - padding));
-                console.log("movePercent: "+movePercent+" calcscroll: "+calcScroll+" depth: "+((this.depth + padding) - (this.depth - padding)));
-                this.mesh.position.x = this.initialX - (movePercent * 200);              
-              }
+              updatePos: updatePos,
             });
 
             
@@ -520,25 +536,7 @@
                 scene.add(hitboxMesh);
                 return hitboxMesh;
               })(),
-              updatePos: function (scroll) {
-                // only move if scroll is near the depth value
-                const padding = 0.2;
-                const calcScroll = Math.max(0, (scroll-sunPhasePercentage) / (1 - sunPhasePercentage));
-                // console.log("calcscroll: "+calcScroll);
-                if (calcScroll < this.depth - padding || calcScroll > this.depth + padding) {
-                  // console.log("not in range: "+this.depth);
-                  return;
-                }
-                // move the text right to left based on scroll in range
-                const movePercent = (calcScroll - (this.depth - padding)) / ((this.depth + padding) - (this.depth - padding));
-                // console.log("movePercent: "+movePercent+" calcscroll: "+calcScroll+" depth: "+((this.depth + padding) - (this.depth - padding)));
-                this.mesh.position.x = this.initialX - (movePercent * 400);
-
-                let newPos = this.mesh.position.clone();
-                newPos.add(this.hitboxOffset);
-                this.hitbox.position.copy(newPos); // Sync hitbox position with text
-                // console.log("newPos: "+newPos);
-              },
+              updatePos: updatePos,
             });
           });
         }); 
@@ -552,7 +550,7 @@
             // Calculate scroll progress (0 to 1)
             const scrollProgress = Math.abs(t) / (mainHeight - windowHeight);
             
-            // Sun movement phase (first 30% of scroll)
+            // Sun movement phase (first % of scroll)
             const sunPhase = Math.min(scrollProgress / sunPhasePercentage, 1);
             
             // Sun movement from left to right, stopping at noon (x=0)
@@ -584,8 +582,8 @@
                 }
             }
 
-            // Camera movement phase (after sun movement, last 70% of scroll)
-            const cameraPhase = Math.max(0, (scrollProgress - sunPhasePercentage) / (1 - sunPhasePercentage));
+            // Camera movement phase (oceanPhase)
+            const cameraPhase = Math.min(1, Math.max(0, (scrollProgress - sunPhasePercentage) / (oceanPhasePercentage)));
             const maxDepth = oceanDepth + 40; // Maximum depth (just above sea floor)
             camera.position.y = -cameraPhase * maxDepth + 50;
             camera.rotation.x = -Math.PI / 8;
