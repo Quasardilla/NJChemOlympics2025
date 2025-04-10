@@ -19,6 +19,8 @@
     const oceanDepth = 200;
     const sunPhasePercentage = 0.2;
     const oceanPhasePercentage = 0.5;
+    const submarinePhasePercentage = 0.3;
+
 
 
     let loadedCount = 0;
@@ -88,7 +90,7 @@
         const movePercent = (calcScroll - (this.depth - padding)) / ((this.depth + padding) - (this.depth - padding));
 
         if (this.isSubmarine) {
-            this.mesh.position.x = this.initialX - (movePercent * 200);
+            this.mesh.position.x = this.initialX - (movePercent * 60);
         } else {
             this.mesh.position.x = this.initialX - (movePercent * 400);
 
@@ -110,6 +112,7 @@
     let controls = null;
     let oceanMaterial = null;
     let floatingObjects = null;
+    let submarineMesh = null;
     let raycaster = new Raycaster();
     let mouse = new Vector2();
     const scene = new Scene();
@@ -391,10 +394,12 @@
 
             if (textLabels[index] == "submarine") {
 
-                //use submarineScene
+                submarineMesh = submarineScene.clone();//group object
                 
-                const submarineMesh = new Mesh(submarineScene.children[0].geometry, new MeshStandardMaterial({ color: 0x00ff00 }));
-                
+                submarineMesh.position.y = -oceanDepth * depth;
+                submarineMesh.position.x = 50;
+                scene.add(submarineMesh);
+
                 floatingObjects.push({
                     mesh: submarineMesh,
                     speed: 0.2,
@@ -475,10 +480,10 @@
 
             if (event.key === 'p') {
 
-                enabledControls = !enabledControls;
-                controls.enabled = enabledControls;
+                controlsEnabled = !controlsEnabled;
+                controls.enabled = controlsEnabled;
 
-                if (!enabledControls) window.location.reload();
+                if (!controlsEnabled) window.location.reload();
                 
             }
 
@@ -525,6 +530,8 @@
         
     }
     
+    let cameraSubStart = null;
+    let cameraSubEnd = null;
     function moveCamera() {
         const t = document.body.getBoundingClientRect().top;
         const mainHeight = document.querySelector("main").scrollHeight;
@@ -554,12 +561,35 @@
             }
         }
 
-        const cameraPhase = Math.min(1, Math.max(0, (scrollProgress - sunPhasePercentage) / (oceanPhasePercentage)));
-        const maxDepth = oceanDepth + 40;
-        camera.position.y = -cameraPhase * maxDepth + 50;
-        camera.rotation.x = -Math.PI / 8;
+        const cameraOceanPhase = Math.min(1, Math.max(0, (scrollProgress - sunPhasePercentage) / (oceanPhasePercentage)));
+        const cameraSubmarinePhase = Math.min(1, Math.max(0, (scrollProgress - oceanPhasePercentage - sunPhasePercentage) / (submarinePhasePercentage)));
+        
+        const maxDepth = oceanDepth + 20;
+        
+        
 
-        const darkness = darknessEnabled ? Math.abs(Math.sin((sunPhase/2) * Math.PI - Math.PI/2)) : 0;
+        if (cameraOceanPhase != 1) {
+            camera.position.y = -cameraOceanPhase * maxDepth + 50;
+            camera.rotation.x = -Math.PI / 8;
+            cameraSubStart = null;
+        } else if (cameraOceanPhase == 1 && cameraSubmarinePhase != 0) {
+
+            console.log(cameraSubmarinePhase);
+            if (cameraSubStart == null) {
+                cameraSubStart = camera.position.clone();
+                cameraSubEnd =  submarineMesh.position.clone();
+            }
+
+
+            camera.position.x = MathUtils.lerp(cameraSubStart.x, cameraSubEnd.x, cameraSubmarinePhase);
+            camera.position.y = MathUtils.lerp(cameraSubStart.y, cameraSubEnd.y, cameraSubmarinePhase);
+            camera.position.z = MathUtils.lerp(cameraSubStart.z, cameraSubEnd.z, cameraSubmarinePhase);
+        }
+
+
+
+
+        const darkness = (darknessEnabled) ? Math.abs(Math.sin((sunPhase/2) * Math.PI - Math.PI/2)) : 0;
 
         scene.background = new Color(0x87CEEB).lerp(new Color(0x000033), darkness);
         ambientLight.intensity = 0.5 * (1 - darkness);
