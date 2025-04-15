@@ -13,6 +13,10 @@
 
     import { onMount } from 'svelte';
 
+    import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+    import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+    import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
+
     let controlsEnabled = false;
     let darknessEnabled = true;
 
@@ -113,9 +117,12 @@
     let oceanMaterial = null;
     let floatingObjects = null;
     let submarineMesh = null;
+    let submarineItems = null;
     let raycaster = new Raycaster();
     let mouse = new Vector2();
     const scene = new Scene();
+    let composer, outlinePass;
+
     function init() {
 
         //set page scroll to 0
@@ -478,6 +485,44 @@
 
         });
 
+
+
+        // Set up postprocessing
+        composer = new EffectComposer(renderer);
+        const renderPass = new RenderPass(scene, camera);
+        composer.addPass(renderPass);
+
+        outlinePass = new OutlinePass(
+            new Vector2(window.innerWidth, window.innerHeight),
+            scene,
+            camera
+        );
+        outlinePass.edgeStrength = 3.0;
+        outlinePass.edgeGlow = 0.0;
+        outlinePass.edgeThickness = 1.0;
+        outlinePass.pulsePeriod = 0;
+        outlinePass.visibleEdgeColor.set(0x00ff00);
+        outlinePass.hiddenEdgeColor.set(0x000000);
+        composer.addPass(outlinePass);
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            composer.setSize(window.innerWidth, window.innerHeight);
+        }, false);
+
+
+        console.log(submarineMesh)
+
+        submarineItems = submarineMesh.children.filter(item => {
+            if (item.name == "Bag" || item.name == "CD" || item.name == "Bottle")
+                return item;
+        });
+
+
+
     }
 
     function addFunctions() {
@@ -581,14 +626,13 @@
             cameraSubStart = null;
         } else if (cameraOceanPhase == 1 && cameraSubmarinePhase != 0) {
 
-            console.log(cameraSubmarinePhase);
             if (cameraSubStart == null) {
                 cameraSubStart = camera.position.clone();
                 cameraSubEnd =  submarineMesh.position.clone();
                 cameraRotSubStart = camera.rotation.clone();
                 cameraRotSubEnd = new Vector3(0, 0, 0);
 
-                let cameraSubEndOffset = new Vector3(0.1, 1.5, -2.5);
+                let cameraSubEndOffset = new Vector3(0.1, 1.5, -2);
                 cameraSubEnd.add(cameraSubEndOffset);
             }
 
@@ -634,6 +678,7 @@
         });
     }
     
+    let hoveredReset = false;
     function animate() {
         requestAnimationFrame(animate);
 
@@ -656,26 +701,28 @@
                 }
             });
 
-
             raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(
-                floatingObjects.map(obj => (obj.isFloatingText && obj.isLink) ? obj.hitbox : null).filter(Boolean)
-            );
+
+           
+           
+            const items = floatingObjects.map(obj => (obj.isFloatingText && obj.isLink) ? obj.hitbox : null).filter(Boolean);
+            submarineItems.forEach(item => {
+                items.push(item);
+            });
+
+            const intersects = raycaster.intersectObjects(items);
+
+
+
             if (intersects.length > 0) {
                 const intersectedItem = intersects[0].object;
-                const linkedObject = floatingObjects.find(obj => obj.hitbox === intersectedItem);
-                if (linkedObject) 
-                    linkedObject.mesh.material.color.set(0x00ff00);
+                outlinePass.selectedObjects = [intersectedItem];
             } else {
-                floatingObjects.forEach(item => {
-                    if (item.isFloatingText && item.isLink) 
-                        item.mesh.material.color.set(0xff0000);
-                });
+                outlinePass.selectedObjects = [];
             }
 
+            composer.render();
 
-            renderer.render(scene, camera);
-            
         }
 
     }
