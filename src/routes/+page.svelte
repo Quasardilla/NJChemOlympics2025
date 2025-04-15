@@ -58,7 +58,7 @@
             loadedCount++;
         });
         
-        gltfLoader.load('/models/Submarine.4.glb', (gltf) => {
+        gltfLoader.load('/models/Submarine.glb', (gltf) => {
             submarineScene = gltf.scene;            
             loadedCount++;
         });
@@ -90,7 +90,7 @@
         const movePercent = (calcScroll - (this.depth - padding)) / ((this.depth + padding) - (this.depth - padding));
 
         if (this.isSubmarine) {
-            this.mesh.position.x = this.initialX - (movePercent * 60);
+            this.mesh.position.x = this.initialX - (movePercent * 63);
         } else {
             this.mesh.position.x = this.initialX - (movePercent * 400);
 
@@ -117,6 +117,11 @@
     let mouse = new Vector2();
     const scene = new Scene();
     function init() {
+
+        //set page scroll to 0
+        document.body.scrollTop = 0;
+        document.documentElement.scrollTop = 0;
+
 
         scene.fog = new Fog(0x87CEEB, 50, 200);
 
@@ -532,6 +537,8 @@
     
     let cameraSubStart = null;
     let cameraSubEnd = null;
+    let cameraRotSubStart = null;
+    let cameraRotSubEnd = null;
     function moveCamera() {
         const t = document.body.getBoundingClientRect().top;
         const mainHeight = document.querySelector("main").scrollHeight;
@@ -564,7 +571,7 @@
         const cameraOceanPhase = Math.min(1, Math.max(0, (scrollProgress - sunPhasePercentage) / (oceanPhasePercentage)));
         const cameraSubmarinePhase = Math.min(1, Math.max(0, (scrollProgress - oceanPhasePercentage - sunPhasePercentage) / (submarinePhasePercentage)));
         
-        const maxDepth = oceanDepth + 20;
+        const maxDepth = oceanDepth + 25;
         
         
 
@@ -578,12 +585,21 @@
             if (cameraSubStart == null) {
                 cameraSubStart = camera.position.clone();
                 cameraSubEnd =  submarineMesh.position.clone();
+                cameraRotSubStart = camera.rotation.clone();
+                cameraRotSubEnd = new Vector3(0, 0, 0);
+
+                let cameraSubEndOffset = new Vector3(0.1, 1.5, -2.5);
+                cameraSubEnd.add(cameraSubEndOffset);
             }
 
 
             camera.position.x = MathUtils.lerp(cameraSubStart.x, cameraSubEnd.x, cameraSubmarinePhase);
             camera.position.y = MathUtils.lerp(cameraSubStart.y, cameraSubEnd.y, cameraSubmarinePhase);
             camera.position.z = MathUtils.lerp(cameraSubStart.z, cameraSubEnd.z, cameraSubmarinePhase);
+
+            camera.rotation.x = MathUtils.lerp(cameraRotSubStart.x, cameraRotSubEnd.x, cameraSubmarinePhase);
+            camera.rotation.y = MathUtils.lerp(cameraRotSubStart.y, cameraRotSubEnd.y, cameraSubmarinePhase);
+            camera.rotation.z = MathUtils.lerp(cameraRotSubStart.z, cameraRotSubEnd.z, cameraSubmarinePhase);
         }
 
 
