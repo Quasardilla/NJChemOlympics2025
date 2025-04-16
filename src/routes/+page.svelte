@@ -497,11 +497,11 @@
             scene,
             camera
         );
-        outlinePass.edgeStrength = 3.0;
-        outlinePass.edgeGlow = 0.0;
-        outlinePass.edgeThickness = 1.0;
-        outlinePass.pulsePeriod = 0;
-        outlinePass.visibleEdgeColor.set(0x00ff00);
+        outlinePass.edgeStrength = 5;
+        outlinePass.edgeGlow = 0.5;
+        outlinePass.edgeThickness = 1.5;
+        outlinePass.pulsePeriod = 1.5;
+        outlinePass.visibleEdgeColor.set(0xf7f387);
         outlinePass.hiddenEdgeColor.set(0x000000);
         composer.addPass(outlinePass);
 
@@ -714,11 +714,18 @@
 
 
 
+
             if (intersects.length > 0) {
                 const intersectedItem = intersects[0].object;
-                outlinePass.selectedObjects = [intersectedItem];
+                composer.passes[1].selectedObjects = [intersectedItem];
+
+                composer.passes[1].visibleEdgeColor.set(0xffffff);
+                composer.passes[1].pulsePeriod = 0;
             } else {
-                outlinePass.selectedObjects = [];
+                composer.passes[1].selectedObjects = items;
+                
+                composer.passes[1].visibleEdgeColor.set(0x0062ff);
+                composer.passes[1].pulsePeriod = 1.5;
             }
 
             composer.render();
