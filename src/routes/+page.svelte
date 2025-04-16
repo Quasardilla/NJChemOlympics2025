@@ -92,7 +92,7 @@
             return;
         
         const movePercent = (calcScroll - (this.depth - padding)) / ((this.depth + padding) - (this.depth - padding));
-
+        
         if (this.isSubmarine) {
             this.mesh.position.x = this.initialX - (movePercent * 63);
         } else {
@@ -118,6 +118,7 @@
     let floatingObjects = null;
     let submarineMesh = null;
     let submarineItems = null;
+    let itemClicked = null;
     let raycaster = new Raycaster();
     let mouse = new Vector2();
     const scene = new Scene();
@@ -514,12 +515,20 @@
         }, false);
 
 
-        console.log(submarineMesh)
-
         submarineItems = submarineMesh.children.filter(item => {
             if (item.name == "Bag" || item.name == "CD" || item.name == "Bottle")
                 return item;
         });
+
+        //order of bag, bottle, cd
+        submarineItems.sort((a, b) => {
+            if (a.name < b.name) return -1;
+            if (a.name > b.name) return 1;
+            return 0;
+        });
+
+        //-1 = nothing clicked, 0 = bag, 1 = bottle, 2 = cd
+        itemClicked = -1;
 
 
 
@@ -550,9 +559,16 @@
 
             raycaster.setFromCamera(mouse, camera);
 
-            const intersects = raycaster.intersectObjects(
-                floatingObjects.map(obj => (obj.isFloatingText && obj.isLink) ? obj.hitbox : null).filter(Boolean)
-            );
+
+            const items = floatingObjects.map(obj => (obj.isFloatingText && obj.isLink) ? obj.hitbox : null).filter(Boolean) 
+            
+            submarineItems.forEach(item => {
+                items.push(item);
+            });
+            
+            
+            const intersects = raycaster.intersectObjects(items);
+
 
             if (intersects.length > 0) {
                 
@@ -561,6 +577,8 @@
                 
                 if (linkedObject) {
                     window.location.href = linkedObject.link;
+                } else {
+                    itemClicked = submarineItems.indexOf(intersectedItem);
                 }
 
             }
@@ -576,7 +594,6 @@
         
         }, false);
 
-        document.body.onscroll = moveCamera;
         
     }
     
@@ -585,6 +602,7 @@
     let cameraRotSubStart = null;
     let cameraRotSubEnd = null;
     function moveCamera() {
+
         const t = document.body.getBoundingClientRect().top;
         const mainHeight = document.querySelector("main").scrollHeight;
         const windowHeight = window.innerHeight;
@@ -678,9 +696,11 @@
         });
     }
     
-    let hoveredReset = false;
     function animate() {
         requestAnimationFrame(animate);
+
+        document.body.onscroll = (itemClicked == -1) ? moveCamera : null;
+
 
         if (loadedCount == MAX_LOADED) {
             init();
@@ -715,15 +735,21 @@
 
 
 
-            if (intersects.length > 0) {
+            if (intersects.length > 0 && itemClicked == -1) {
                 const intersectedItem = intersects[0].object;
                 composer.passes[1].selectedObjects = [intersectedItem];
 
                 composer.passes[1].visibleEdgeColor.set(0xffffff);
                 composer.passes[1].pulsePeriod = 0;
+            } else if (itemClicked != -1) {
+                const item = submarineItems[itemClicked];
+                composer.passes[1].selectedObjects = [item];
+
+                composer.passes[1].visibleEdgeColor.set(0xffffff);
+                composer.passes[1].pulsePeriod = 0;
             } else {
                 composer.passes[1].selectedObjects = items;
-                
+
                 composer.passes[1].visibleEdgeColor.set(0x0062ff);
                 composer.passes[1].pulsePeriod = 1.5;
             }
