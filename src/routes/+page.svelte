@@ -533,7 +533,6 @@
             return 0;
         });
 
-        console.log(submarineItems)
 
         //-1 = nothing clicked, 0 = bag, 1 = bottle, 2 = disk
         itemClicked = -1;
@@ -646,13 +645,20 @@
         
         
 
-        if (cameraOceanPhase != 1) {
+        phaseif: if (cameraOceanPhase != 1) {
             camera.position.y = -cameraOceanPhase * maxDepth + 50;
             camera.rotation.x = -Math.PI / 8;
             cameraSubStart = null;
+            cameraSubEnd = null;
         } else if (cameraOceanPhase == 1 && cameraSubmarinePhase != 0) {
 
             if (cameraSubStart == null) {
+
+                if (cameraSubEnd == null) {
+                    cameraSubEnd = new Vector3(0, 0, 0);
+                    break phaseif;
+                }
+
                 cameraSubStart = camera.position.clone();
                 cameraSubEnd =  submarineMesh.position.clone();
                 cameraRotSubStart = camera.rotation.clone();
