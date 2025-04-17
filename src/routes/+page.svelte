@@ -515,19 +515,27 @@
         }, false);
 
 
-        submarineItems = submarineMesh.children.filter(item => {
-            if (item.name == "Bag" || item.name == "CD" || item.name == "Bottle")
-                return item;
-        });
+        submarineItems = submarineMesh.children.map(item => {
+                if (item.name == "Bag" || item.name == "Disk" || item.name == "Bottle") 
+                    if (item.name == "Disk")
+                        return item.children[1];
+                    else
+                        return item;
+                else
+                    return null;
+        }).filter(Boolean);
 
-        //order of bag, bottle, cd
+
+        //order of bag, bottle, disk
         submarineItems.sort((a, b) => {
             if (a.name < b.name) return -1;
             if (a.name > b.name) return 1;
             return 0;
         });
 
-        //-1 = nothing clicked, 0 = bag, 1 = bottle, 2 = cd
+        console.log(submarineItems)
+
+        //-1 = nothing clicked, 0 = bag, 1 = bottle, 2 = disk
         itemClicked = -1;
 
 
@@ -650,7 +658,7 @@
                 cameraRotSubStart = camera.rotation.clone();
                 cameraRotSubEnd = new Vector3(0, 0, 0);
 
-                let cameraSubEndOffset = new Vector3(0.1, 1.5, -2);
+                let cameraSubEndOffset = new Vector3(0.1, 1.45, -2);
                 cameraSubEnd.add(cameraSubEndOffset);
             }
 
