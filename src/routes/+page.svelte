@@ -108,6 +108,7 @@
 
 
     let camera = null;
+    let firstCameraPos = null
     let renderer = null;
     let ambientLight = null;
     let directionalLight = null;
@@ -140,7 +141,10 @@
 
         camera = new PerspectiveCamera(75, width/height, 0.1, 10000);
         
-        camera.position.set(0, 0, 30);
+
+        firstCameraPos = new Vector3(0, 0, 30);
+
+        camera.position.set(firstCameraPos.x, firstCameraPos.y, firstCameraPos.z);
         camera.rotation.x = 0.1;
 
         
@@ -659,13 +663,16 @@
                     break phaseif;
                 }
 
-                cameraSubStart = camera.position.clone();
+                cameraSubStart = firstCameraPos.clone();
+                cameraSubStart.y = -maxDepth + 50;
+
                 cameraSubEnd =  submarineMesh.position.clone();
                 cameraRotSubStart = camera.rotation.clone();
                 cameraRotSubEnd = new Vector3(0, 0, 0);
 
                 let cameraSubEndOffset = new Vector3(0.1, 1.45, -2);
                 cameraSubEnd.add(cameraSubEndOffset);
+
             }
 
 
