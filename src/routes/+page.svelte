@@ -25,6 +25,7 @@
     const oceanPhasePercentage = 0.5;
     const submarinePhasePercentage = 0.3;
 
+    const scrollWindowHeight = 5_000;
 
 
     let loadedCount = 0;
@@ -94,7 +95,7 @@
         const movePercent = (calcScroll - (this.depth - padding)) / ((this.depth + padding) - (this.depth - padding));
         
         if (this.isSubmarine) {
-            this.mesh.position.x = this.initialX - (movePercent * 63);
+            this.mesh.position.x = this.initialX - (movePercent * 65);
         } else {
             this.mesh.position.x = this.initialX - (movePercent * 400);
 
@@ -796,19 +797,11 @@
 
 <main>
     {#if !controlsEnabled}
-        <div id="lorem">
-            Lorem, ipsum dolor sit amet consectetur adipisicing elit. Odit tenetur corporis, optio iusto exercitationem quisquam debitis magni perferendis eius impedit distinctio incidunt. Neque tempora vitae quo amet cum similique praesentium vero voluptatem molestias totam, fuga laudantium assumenda maxime? Maiores similique quam, consequatur porro qui quisquam nobis aperiam sequi odit sed aliquam, officiis ad aut veniam! Voluptatibus, doloremque. Aspernatur mollitia sequi aperiam cupiditate velit accusantium perspiciatis at, blanditiis, nam distinctio animi inventore. Id unde delectus sint dicta provident cum, deleniti laborum temporibus modi optio, dignissimos nesciunt magnam soluta omnis minus minima atque, molestiae praesentium. Minus ipsum, sed est harum laudantium delectus?
-        </div>
+        <div id="scroll-window" style='height:{scrollWindowHeight}px'></div>
     {/if}
 </main>
 
 <style>
-    #lorem {
-        font-size: 14rem;
-        text-align: center;
-        color: rgba(255, 255, 255, 0);
-    }
-
     canvas {
         position: fixed;
         top: 0;
