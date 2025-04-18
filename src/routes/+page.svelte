@@ -589,8 +589,9 @@
                 
                 if (linkedObject) {
                     window.location.href = linkedObject.link;
-                } else {
+                } else if (itemClicked == -1) {
                     itemClicked = submarineItems.indexOf(intersectedItem);
+                    tvAnimFinished = false;
                 }
 
             }
@@ -613,6 +614,7 @@
     let cameraSubEnd = null;
     let cameraRotSubStart = null;
     let cameraRotSubEnd = null;
+    let cameraSubEndOffset = new Vector3(0.1, 1.45, -2);
     function moveCamera() {
 
         const t = document.body.getBoundingClientRect().top;
@@ -671,7 +673,6 @@
                 cameraRotSubStart = camera.rotation.clone();
                 cameraRotSubEnd = new Vector3(0, 0, 0);
 
-                let cameraSubEndOffset = new Vector3(0.1, 1.45, -2);
                 cameraSubEnd.add(cameraSubEndOffset);
 
             }
@@ -718,6 +719,10 @@
         });
     }
     
+    let tvAnimFinished = true;
+    let tvAnimTime = .5;
+    let tvAnimCurrentTime = 0;
+    let prevTime = 0;
     function animate() {
         requestAnimationFrame(animate);
 
@@ -731,6 +736,7 @@
         } else if (loadedCount == -1) {
 
             const time = performance.now() * 0.001;
+
 
             oceanMaterial.uniforms.time.value = time;
 
@@ -776,8 +782,37 @@
                 composer.passes[1].pulsePeriod = 1.5;
             }
 
-            composer.render();
 
+            if (itemClicked != -1 && !tvAnimFinished) {
+
+                let t = Math.min(1, tvAnimCurrentTime / tvAnimTime);
+                
+                let initial = cameraSubEnd.clone();
+                let final = (new Vector3(-.1, -.1, -1.1)).add(initial).clone();
+                
+                let delta = time - prevTime; //seconds
+                tvAnimCurrentTime += delta;
+                
+                camera.position.x = MathUtils.lerp(initial.x, final.x, t);
+                camera.position.y = MathUtils.lerp(initial.y, final.y, t);
+                camera.position.z = MathUtils.lerp(initial.z, final.z, t);
+                
+                tvAnimFinished = t == 1;
+            }
+
+
+
+
+
+
+
+
+
+
+
+
+            composer.render();
+            prevTime = time;
         }
 
     }
