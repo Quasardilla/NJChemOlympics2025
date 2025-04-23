@@ -69,7 +69,8 @@
             loadedCount++;
         });
         
-        textureLoader.load('/img/geo/rockbanner.png', (texture) => {
+        textureLoader.load('/img/research.png', (texture) => {
+        // textureLoader.load('/img/geo/rockbanner.png', (texture) => {
             tvTxtTexture = texture;
             loadedCount++;
         });
@@ -548,11 +549,13 @@
         //-1 = nothing clicked, 0 = bag, 1 = bottle, 2 = disk
         itemClicked = -1;
 
-        const tvGeometry = new PlaneGeometry(0.43, 0.5);
+        const tvGeometry = new PlaneGeometry(0.43, 0.4);
         const tvMaterial = new ShaderMaterial({
             uniforms: {
                 scroll: {value: 0},
-                text: { value: tvTxtTexture }
+                text: { value: tvTxtTexture },
+                height: { value: tvTxtTexture.source.data.naturalHeight },
+                screenHeight: { value: 1200 }
             },
             vertexShader: `
                 varying vec2 vUv;
@@ -564,11 +567,14 @@
             fragmentShader: `
                 uniform sampler2D text;
                 uniform float scroll;
+                uniform float height;
+                uniform float screenHeight;
                 varying vec2 vUv;
                 void main() {
-                    vec4 color = texture2D(text, vUv);
-                    if (vUv.y > 0.8) {
-                        discard;
+                    vec2 nvUv = vec2(vUv.x, ((1.0-scroll)*height + vUv.y*screenHeight)/(height+screenHeight));
+                    vec4 color = texture2D(text, nvUv);
+                    if (nvUv.y > 1.0) {
+                        gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
                     } else {
                         gl_FragColor = vec4(color.xyz, 1.0);
                     }
@@ -632,6 +638,10 @@
                 } else if (itemClicked == -1) {
                     itemClicked = submarineItems.indexOf(intersectedItem);
                     tvAnimFinished = false;
+
+                    document.body.scrollTop = 0;
+                    document.documentElement.scrollTop = 0;
+
                 }
 
             }
@@ -765,17 +775,16 @@
 
             let pos = submarineMesh.children.find(item => item.name == "Screen").position;
 
-            tvMesh.position.set(pos.x, pos.y, pos.z);
+            tvMesh.position.set(pos.x, pos.y, pos.z+0.02);
             tvMesh.position.add(submarineMesh.position);
+            
+            tvMesh.material.uniforms.scroll.value = scrollProgress;
 
-            let offset = new Vector3(0, 0.05, 0.02);
-            tvMesh.position.add(offset);
-
+            
         } else {
             
             //item is clicked, display text on scroll
             tvMesh.material.uniforms.scroll.value = scrollProgress;
-            //not working
 
         }
 
@@ -789,7 +798,8 @@
     function animate() {
         requestAnimationFrame(animate);
 
-        document.body.onscroll = (itemClicked == -1) ? moveCamera : null;
+        // document.body.onscroll = (itemClicked == -1) ? moveCamera : null;
+        document.body.onscroll = moveCamera;
 
 
         if (loadedCount == MAX_LOADED) {
