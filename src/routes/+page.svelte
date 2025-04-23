@@ -778,7 +778,7 @@
             tvMesh.position.set(pos.x, pos.y, pos.z+0.02);
             tvMesh.position.add(submarineMesh.position);
             
-            tvMesh.material.uniforms.scroll.value = scrollProgress;
+            tvMesh.material.uniforms.scroll.value = 2;
 
             
         } else {
