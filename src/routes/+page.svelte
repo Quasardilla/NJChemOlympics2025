@@ -29,11 +29,12 @@
 
 
     let loadedCount = 0;
-    const MAX_LOADED = 5;
+    const MAX_LOADED = 6; // 3 solar flare pngs, 1 font, 1 submarine glb, 1 tv text texture png, 
 
     let submarineScene = null;
     let lensflare = null;
     let textFont = null;
+    let tvTxtTexture = null
     function loadStuff() {
         
         const gltfLoader = new GLTFLoader();
@@ -68,6 +69,10 @@
             loadedCount++;
         });
         
+        textureLoader.load('/img/geo/rockbanner.png', (texture) => {
+            tvTxtTexture = texture;
+            loadedCount++;
+        });
 
 
 
@@ -121,6 +126,7 @@
     let submarineMesh = null;
     let submarineItems = null;
     let itemClicked = null;
+    let tvMesh = null;
     let raycaster = new Raycaster();
     let mouse = new Vector2();
     const scene = new Scene();
@@ -542,6 +548,40 @@
         //-1 = nothing clicked, 0 = bag, 1 = bottle, 2 = disk
         itemClicked = -1;
 
+        const tvGeometry = new PlaneGeometry(0.43, 0.5);
+        const tvMaterial = new ShaderMaterial({
+            uniforms: {
+                scroll: {value: 0},
+                text: { value: tvTxtTexture }
+            },
+            vertexShader: `
+                varying vec2 vUv;
+                void main() {
+                    vUv = uv;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                }
+            `,
+            fragmentShader: `
+                uniform sampler2D text;
+                uniform float scroll;
+                varying vec2 vUv;
+                void main() {
+                    vec4 color = texture2D(text, vUv);
+                    if (vUv.y > 0.8) {
+                        discard;
+                    } else {
+                        gl_FragColor = vec4(color.xyz, 1.0);
+                    }
+                }
+            `,
+            transparent: true
+        });
+
+        tvMesh = new Mesh(tvGeometry, tvMaterial);
+        scene.add(tvMesh);
+
+
+
 
 
     }
@@ -623,100 +663,123 @@
 
         const scrollProgress = Math.abs(t) / (mainHeight - windowHeight);
 
-        const sunPhase = Math.min(scrollProgress / sunPhasePercentage, 1);
 
-        const startX = -450;
-        const endX = 0;
-        const sunX = startX + (endX - startX) * sunPhase;
+        if (itemClicked == -1) {
 
-        const baseHeight = 100;
-        const heightVariation = 200;
-        const easing = t => t * t * (3 - 2 * t);
-        const easedPhase = easing(sunPhase);
-        const sunY = baseHeight + Math.sin(easedPhase * Math.PI * 0.5) * heightVariation;
-
-        flareLight.position.set(sunX, sunY, sun.position.z - 700);
-
-        if (camera.position.y <= 0) {
-            scene.remove(flareLight);
-        } else {
-            if (!scene.children.includes(flareLight)) {
-                scene.add(flareLight);
-            }
-        }
-
-        const cameraOceanPhase = Math.min(1, Math.max(0, (scrollProgress - sunPhasePercentage) / (oceanPhasePercentage)));
-        const cameraSubmarinePhase = Math.min(1, Math.max(0, (scrollProgress - oceanPhasePercentage - sunPhasePercentage) / (submarinePhasePercentage)));
-        
-        const maxDepth = oceanDepth + 25;
-        
-        
-
-        phaseif: if (cameraOceanPhase != 1) {
-            camera.position.y = -cameraOceanPhase * maxDepth + 50;
-            camera.rotation.x = -Math.PI / 8;
-            cameraSubStart = null;
-            cameraSubEnd = null;
-        } else if (cameraOceanPhase == 1 && cameraSubmarinePhase != 0) {
-
-            if (cameraSubStart == null) {
-
-                if (cameraSubEnd == null) {
-                    cameraSubEnd = new Vector3(0, 0, 0);
-                    break phaseif;
-                }
-
-                cameraSubStart = firstCameraPos.clone();
-                cameraSubStart.y = -maxDepth + 50;
-
-                cameraSubEnd =  submarineMesh.position.clone();
-                cameraRotSubStart = camera.rotation.clone();
-                cameraRotSubEnd = new Vector3(0, 0, 0);
-
-                cameraSubEnd.add(cameraSubEndOffset);
-
-            }
-
-
-            camera.position.x = MathUtils.lerp(cameraSubStart.x, cameraSubEnd.x, cameraSubmarinePhase);
-            camera.position.y = MathUtils.lerp(cameraSubStart.y, cameraSubEnd.y, cameraSubmarinePhase);
-            camera.position.z = MathUtils.lerp(cameraSubStart.z, cameraSubEnd.z, cameraSubmarinePhase);
-
-            camera.rotation.x = MathUtils.lerp(cameraRotSubStart.x, cameraRotSubEnd.x, cameraSubmarinePhase);
-            camera.rotation.y = MathUtils.lerp(cameraRotSubStart.y, cameraRotSubEnd.y, cameraSubmarinePhase);
-            camera.rotation.z = MathUtils.lerp(cameraRotSubStart.z, cameraRotSubEnd.z, cameraSubmarinePhase);
-        }
-
-
-
-
-        const darkness = (darknessEnabled) ? Math.abs(Math.sin((sunPhase/2) * Math.PI - Math.PI/2)) : 0;
-
-        scene.background = new Color(0x87CEEB).lerp(new Color(0x000033), darkness);
-        ambientLight.intensity = 0.5 * (1 - darkness);
-        directionalLight.intensity = 1 * (1 - darkness);
-
-        scene.fog.density = 0.001 + (darkness * 0.002);
-
-        oceanMaterial.uniforms.darkness.value = darkness;
-
-        floatingObjects.forEach(obj => {
-
-            if (obj.isShip) {
-                if (camera.position.y >= 0) {
-                    const movement = Math.sin(scrollProgress * Math.PI * 2 + obj.movementOffset) * 100;
-                    obj.mesh.position.x = obj.initialShipX + movement;
-                    obj.mesh.position.z = obj.initialShipZ + movement;
-                }
-            } else if (obj.isFloatingText || obj.isSubmarine) {
-                obj.updatePos(scrollProgress); 
+            const sunPhase = Math.min(scrollProgress / sunPhasePercentage, 1);
+    
+            const startX = -450;
+            const endX = 0;
+            const sunX = startX + (endX - startX) * sunPhase;
+    
+            const baseHeight = 100;
+            const heightVariation = 200;
+            const easing = t => t * t * (3 - 2 * t);
+            const easedPhase = easing(sunPhase);
+            const sunY = baseHeight + Math.sin(easedPhase * Math.PI * 0.5) * heightVariation;
+    
+            flareLight.position.set(sunX, sunY, sun.position.z - 700);
+    
+            if (camera.position.y <= 0) {
+                scene.remove(flareLight);
             } else {
-                const movement = Math.sin(scrollProgress * Math.PI * 2 + obj.movementOffset) * 20;
-                obj.mesh.position.x = obj.initialX + movement;
-                obj.mesh.position.z = obj.initialZ + movement;
+                if (!scene.children.includes(flareLight)) {
+                    scene.add(flareLight);
+                }
             }
+    
+            const cameraOceanPhase = Math.min(1, Math.max(0, (scrollProgress - sunPhasePercentage) / (oceanPhasePercentage)));
+            const cameraSubmarinePhase = Math.min(1, Math.max(0, (scrollProgress - oceanPhasePercentage - sunPhasePercentage) / (submarinePhasePercentage)));
+            
+            const maxDepth = oceanDepth + 25;
+            
+            
+    
+            phaseif: 
+            if (cameraOceanPhase != 1) {
+                camera.position.y = -cameraOceanPhase * maxDepth + 50;
+                camera.rotation.x = -Math.PI / 8;
+                cameraSubStart = null;
+                cameraSubEnd = null;
+            } else if (cameraOceanPhase == 1 && cameraSubmarinePhase != 0) {
+    
+                if (cameraSubStart == null) {
+    
+                    if (cameraSubEnd == null) {
+                        cameraSubEnd = new Vector3(0, 0, 0);
+                        break phaseif;
+                    }
+    
+                    cameraSubStart = firstCameraPos.clone();
+                    cameraSubStart.y = -maxDepth + 50;
+    
+                    cameraSubEnd =  submarineMesh.position.clone();
+                    cameraRotSubStart = camera.rotation.clone();
+                    cameraRotSubEnd = new Vector3(0, 0, 0);
+    
+                    cameraSubEnd.add(cameraSubEndOffset);
+    
+                }
+    
+    
+                camera.position.x = MathUtils.lerp(cameraSubStart.x, cameraSubEnd.x, cameraSubmarinePhase);
+                camera.position.y = MathUtils.lerp(cameraSubStart.y, cameraSubEnd.y, cameraSubmarinePhase);
+                camera.position.z = MathUtils.lerp(cameraSubStart.z, cameraSubEnd.z, cameraSubmarinePhase);
+    
+                camera.rotation.x = MathUtils.lerp(cameraRotSubStart.x, cameraRotSubEnd.x, cameraSubmarinePhase);
+                camera.rotation.y = MathUtils.lerp(cameraRotSubStart.y, cameraRotSubEnd.y, cameraSubmarinePhase);
+                camera.rotation.z = MathUtils.lerp(cameraRotSubStart.z, cameraRotSubEnd.z, cameraSubmarinePhase);
+            }
+    
+    
+    
+    
+            const darkness = (darknessEnabled) ? Math.abs(Math.sin((sunPhase/2) * Math.PI - Math.PI/2)) : 0;
+    
+            scene.background = new Color(0x87CEEB).lerp(new Color(0x000033), darkness);
+            ambientLight.intensity = 0.5 * (1 - darkness);
+            directionalLight.intensity = 1 * (1 - darkness);
+    
+            scene.fog.density = 0.001 + (darkness * 0.002);
+    
+            oceanMaterial.uniforms.darkness.value = darkness;
+    
+            floatingObjects.forEach(obj => {
+    
+                if (obj.isShip) {
+                    if (camera.position.y >= 0) {
+                        const movement = Math.sin(scrollProgress * Math.PI * 2 + obj.movementOffset) * 100;
+                        obj.mesh.position.x = obj.initialShipX + movement;
+                        obj.mesh.position.z = obj.initialShipZ + movement;
+                    }
+                } else if (obj.isFloatingText || obj.isSubmarine) {
+                    obj.updatePos(scrollProgress); 
+                } else {
+                    const movement = Math.sin(scrollProgress * Math.PI * 2 + obj.movementOffset) * 20;
+                    obj.mesh.position.x = obj.initialX + movement;
+                    obj.mesh.position.z = obj.initialZ + movement;
+                }
+    
+            });
 
-        });
+
+            let pos = submarineMesh.children.find(item => item.name == "Screen").position;
+
+            tvMesh.position.set(pos.x, pos.y, pos.z);
+            tvMesh.position.add(submarineMesh.position);
+
+            let offset = new Vector3(0, 0.05, 0.02);
+            tvMesh.position.add(offset);
+
+        } else {
+            
+            //item is clicked, display text on scroll
+            tvMesh.material.uniforms.scroll.value = scrollProgress;
+            //not working
+
+        }
+
+
     }
     
     let tvAnimFinished = true;
