@@ -128,6 +128,7 @@
     let submarineItems = null;
     let itemClicked = null;
     let tvMesh = null;
+    let tvButtonMesh = null;
     let raycaster = new Raycaster();
     let mouse = new Vector2();
     const scene = new Scene();
@@ -587,7 +588,7 @@
         scene.add(tvMesh);
 
 
-
+        tvButtonMesh = submarineMesh.children.filter(item => item.name == "Button")[0];
 
 
     }
@@ -623,6 +624,7 @@
             submarineItems.forEach(item => {
                 items.push(item);
             });
+            items.push(tvButtonMesh);
             
             
             const intersects = raycaster.intersectObjects(items);
@@ -638,10 +640,20 @@
                 } else if (itemClicked == -1) {
                     itemClicked = submarineItems.indexOf(intersectedItem);
                     tvAnimFinished = false;
+                    tvAnimCurrentTime = 0;
+                    prevTime = performance.now() * 0.001;
 
                     document.body.scrollTop = 0;
                     document.documentElement.scrollTop = 0;
-
+                    
+                } else if (itemClicked != -1) {
+                    tvAnimFinished = false;
+                    itemClicked = -1;
+                    tvAnimCurrentTime = 0;
+                    prevTime = performance.now() * 0.001;
+                    
+                    document.body.scrollTop = document.body.scrollHeight;
+                    document.documentElement.scrollTop = document.documentElement.scrollHeight;
                 }
 
             }
@@ -830,24 +842,24 @@
             submarineItems.forEach(item => {
                 items.push(item);
             });
+            if (itemClicked != -1) items.push(tvButtonMesh);
 
             const intersects = raycaster.intersectObjects(items);
 
 
 
 
-            if (intersects.length > 0 && itemClicked == -1) {
+            if (intersects.length > 0) {
                 const intersectedItem = intersects[0].object;
                 composer.passes[1].selectedObjects = [intersectedItem];
 
                 composer.passes[1].visibleEdgeColor.set(0xffffff);
                 composer.passes[1].pulsePeriod = 0;
             } else if (itemClicked != -1) {
-                const item = submarineItems[itemClicked];
-                composer.passes[1].selectedObjects = [item];
+                composer.passes[1].selectedObjects = [tvButtonMesh];
 
-                composer.passes[1].visibleEdgeColor.set(0xffffff);
-                composer.passes[1].pulsePeriod = 0;
+                composer.passes[1].visibleEdgeColor.set(0x0062ff);
+                composer.passes[1].pulsePeriod = 1.5;
             } else {
                 composer.passes[1].selectedObjects = items;
 
@@ -856,7 +868,7 @@
             }
 
 
-            if (itemClicked != -1 && !tvAnimFinished) {
+            if (!tvAnimFinished) {
 
                 let t = Math.min(1, tvAnimCurrentTime / tvAnimTime);
                 
@@ -866,12 +878,12 @@
                 let delta = time - prevTime; //seconds
                 tvAnimCurrentTime += delta;
                 
-                camera.position.x = MathUtils.lerp(initial.x, final.x, t);
-                camera.position.y = MathUtils.lerp(initial.y, final.y, t);
-                camera.position.z = MathUtils.lerp(initial.z, final.z, t);
+                camera.position.x = MathUtils.lerp(initial.x, final.x, (itemClicked != -1) ? t : 1-t);
+                camera.position.y = MathUtils.lerp(initial.y, final.y, (itemClicked != -1) ? t : 1-t);
+                camera.position.z = MathUtils.lerp(initial.z, final.z, (itemClicked != -1) ? t : 1-t);
                 
-                tvAnimFinished = t == 1;
-            }
+                tvAnimFinished = (itemClicked != -1) ? t == 1 : 1-t == 0;
+            } 
 
 
 
