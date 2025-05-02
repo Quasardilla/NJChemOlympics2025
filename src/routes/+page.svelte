@@ -17,6 +17,8 @@
     import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
     import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass.js';
 
+    import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
+
     let controlsEnabled = false;
     let darknessEnabled = true;
 
@@ -33,7 +35,6 @@
 
     let submarineScene = null;
     let submarineAnimations = null;
-    let gltf2 = null;
     let lensflare = null;
     let textFont = null;
     let tvTxtTexture = null
@@ -68,15 +69,14 @@
         
         // gltfLoader.load('/models/toad.glb', (gltf) => {
         gltfLoader.load('/models/Submarine.glb', (gltf) => {
-            submarineScene = gltf.scene.clone();
+            submarineScene = SkeletonUtils.clone(gltf.scene);
             submarineAnimations = gltf.animations.slice();
 
-            gltf2 = gltf;
+            console.log(submarineScene)
 
 
-
-            console.log("submarineAnimations")
-            console.log(submarineAnimations)
+            // console.log("submarineAnimations")
+            // console.log(submarineAnimations)
 
 
 
@@ -434,7 +434,7 @@
 
             if (textLabels[index] == "submarine") {
 
-                submarineMesh = submarineScene.clone();//group object
+                submarineMesh = SkeletonUtils.clone(submarineScene);//group object
 
                 
                 submarineMesh.position.y = -oceanDepth * depth;
@@ -607,9 +607,27 @@
 
 
 
+        //TODO: make armature not frustum culled to not disapear
+        // scene.frustumCulled = false;
+        scene.traverse( function( object ) { object.frustumCulled = false; } );
+        
+        
+        // scene.traverse( (object) => { 
+        //     console.log(object)
+        //     if (object.name == "Armature") object.frustumCulled = false; 
+        // });
+
+        console.log(scene);
+
+
+
+
+
+
     }
 
-    let mixer = null;
+    let bottleMixer = null;
+    let armatureMixer = null;
     function addFunctions() {
         window.addEventListener('keyup', (event) => {
 
@@ -651,32 +669,50 @@
                 
                 const intersectedItem = intersects[0].object;
                 const linkedObject = floatingObjects.find(obj => obj.hitbox === intersectedItem);
-                
+                console.log(submarineMesh)
                 if (intersectedItem.name == "Bottle") {
 
-                    mixer = new THREE.AnimationMixer(intersectedItem);
+                    bottleMixer = new THREE.AnimationMixer(intersectedItem);
+                    let armature = submarineMesh.children.filter(item => item.name == "Armature")[0];
+                    console.log("armature")
+                    console.log(armature)
+                    console.log("intersecteditem")
+                    console.log(intersectedItem)
+                    armatureMixer = new THREE.AnimationMixer(armature);
 
-                    console.log("mixer")
-                    console.log(mixer)
+                    // console.log("mixer")
+                    // console.log(mixer)
                     
-                    console.log("submarineAnimations[1]")
-                    console.log(submarineAnimations[1])
+                    // console.log("submarineAnimations[1]")
+                    // console.log(submarineAnimations[1])
                     
                     // let nclip = THREE.AnimationUtils.subclip( submarineAnimations[1], 'BottleAction', 0, 100, 30);
                     // let action = mixer.clipAction( nclip )
-                    let action = mixer.clipAction( submarineAnimations[1] )
-
-                    action.setLoop(THREE.LoopOnce);
-                    action.clampWhenFinished = true;
+                    let action = bottleMixer.clipAction( submarineAnimations[1] )
+                    
+                    // action.setLoop(THREE.LoopOnce);
+                    // action.clampWhenFinished = true;
                     action.play();
-
-                    console.log("playing");
+                    
+                    let action2 = armatureMixer.clipAction( submarineAnimations[0] )
+                    
+                    console.log("mixer")
+                    console.log(armatureMixer)
+                    
+                    console.log("submarineAnimations[0]")
+                    console.log(submarineAnimations[0])
+                    // action2.setLoop(THREE.LoopOnce);
+                    // action2.clampWhenFinished = true;
+                    action2.play();
+                    // console.log("playing");
 
 
 
                     return;
                 }
 
+
+                
                 if (linkedObject) {
                     window.location.href = linkedObject.link;
                 } else if (itemClicked == -1) {
@@ -866,7 +902,8 @@
             let delta = time - prevTime; //seconds
 
 
-            if (mixer) mixer.update(delta);
+            if (bottleMixer) bottleMixer.update(delta);
+            if (armatureMixer) armatureMixer.update(delta);
 
 
             oceanMaterial.uniforms.time.value = time;
@@ -888,10 +925,11 @@
             submarineItems.forEach(item => {
                 items.push(item);
             });
+            // const items = [];
+            // submarineMesh.traverse((item) => {if (item.isMesh) items.push(item)});
             if (itemClicked != -1) items.push(tvButtonMesh);
 
             const intersects = raycaster.intersectObjects(items);
-
 
 
 
