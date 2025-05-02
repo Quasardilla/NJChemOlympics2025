@@ -8,7 +8,7 @@
     import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
     import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
     
-    // import * as THREE from 'three';
+    import * as THREE from 'three';
     import { TextureLoader, MathUtils, Raycaster, Vector2, Vector3, Scene, Fog, PerspectiveCamera, WebGLRenderer, Color, AmbientLight, DirectionalLight, SphereGeometry, MeshBasicMaterial, Mesh, PointLight, MeshStandardMaterial, BoxGeometry, PlaneGeometry, ShaderMaterial } from 'three';
 
     import { onMount } from 'svelte';
@@ -32,6 +32,8 @@
     const MAX_LOADED = 6; // 3 solar flare pngs, 1 font, 1 submarine glb, 1 tv text texture png, 
 
     let submarineScene = null;
+    let submarineAnimations = null;
+    let gltf2 = null;
     let lensflare = null;
     let textFont = null;
     let tvTxtTexture = null
@@ -64,8 +66,20 @@
             loadedCount++;
         });
         
+        // gltfLoader.load('/models/toad.glb', (gltf) => {
         gltfLoader.load('/models/Submarine.glb', (gltf) => {
-            submarineScene = gltf.scene;            
+            submarineScene = gltf.scene.clone();
+            submarineAnimations = gltf.animations.slice();
+
+            gltf2 = gltf;
+
+
+
+            console.log("submarineAnimations")
+            console.log(submarineAnimations)
+
+
+
             loadedCount++;
         });
         
@@ -421,6 +435,7 @@
             if (textLabels[index] == "submarine") {
 
                 submarineMesh = submarineScene.clone();//group object
+
                 
                 submarineMesh.position.y = -oceanDepth * depth;
                 submarineMesh.position.x = 50;
@@ -591,8 +606,10 @@
         tvButtonMesh = submarineMesh.children.filter(item => item.name == "Button")[0];
 
 
+
     }
 
+    let mixer = null;
     function addFunctions() {
         window.addEventListener('keyup', (event) => {
 
@@ -635,6 +652,31 @@
                 const intersectedItem = intersects[0].object;
                 const linkedObject = floatingObjects.find(obj => obj.hitbox === intersectedItem);
                 
+                if (intersectedItem.name == "Bottle") {
+
+                    mixer = new THREE.AnimationMixer(intersectedItem);
+
+                    console.log("mixer")
+                    console.log(mixer)
+                    
+                    console.log("submarineAnimations[1]")
+                    console.log(submarineAnimations[1])
+                    
+                    // let nclip = THREE.AnimationUtils.subclip( submarineAnimations[1], 'BottleAction', 0, 100, 30);
+                    // let action = mixer.clipAction( nclip )
+                    let action = mixer.clipAction( submarineAnimations[1] )
+
+                    action.setLoop(THREE.LoopOnce);
+                    action.clampWhenFinished = true;
+                    action.play();
+
+                    console.log("playing");
+
+
+
+                    return;
+                }
+
                 if (linkedObject) {
                     window.location.href = linkedObject.link;
                 } else if (itemClicked == -1) {
@@ -821,6 +863,10 @@
         } else if (loadedCount == -1) {
 
             const time = performance.now() * 0.001;
+            let delta = time - prevTime; //seconds
+
+
+            if (mixer) mixer.update(delta);
 
 
             oceanMaterial.uniforms.time.value = time;
@@ -875,7 +921,6 @@
                 let initial = cameraSubEnd.clone();
                 let final = (new Vector3(-.1, -.1, -1.1)).add(initial).clone();
                 
-                let delta = time - prevTime; //seconds
                 tvAnimCurrentTime += delta;
                 
                 camera.position.x = MathUtils.lerp(initial.x, final.x, (itemClicked != -1) ? t : 1-t);
