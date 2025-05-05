@@ -72,7 +72,7 @@
             submarineScene = SkeletonUtils.clone(gltf.scene);
             submarineAnimations = gltf.animations.slice();
 
-            console.log(submarineScene)
+            // console.log(submarineScene)
 
 
             // console.log("submarineAnimations")
@@ -126,6 +126,16 @@
 
     }
 
+    function setScrollTop() {
+        document.body.scrollTop = 0;
+        document.documentElement.scrollTop = 0;
+    }
+
+    function setScrollBottom() {
+        document.body.scrollTop = document.body.scrollHeight;
+        document.documentElement.scrollTop = document.documentElement.scrollHeight;
+    }
+
 
 
     let camera = null;
@@ -141,6 +151,7 @@
     let submarineMesh = null;
     let submarineItems = null;
     let itemClicked = null;
+    let humanShown = false;
     let tvMesh = null;
     let tvButtonMesh = null;
     let raycaster = new Raycaster();
@@ -150,9 +161,7 @@
 
     function init() {
 
-        //set page scroll to 0
-        document.body.scrollTop = 0;
-        document.documentElement.scrollTop = 0;
+        setScrollTop()
 
 
         scene.fog = new Fog(0x87CEEB, 50, 200);
@@ -609,7 +618,7 @@
 
         //TODO: make armature not frustum culled to not disapear
         // scene.frustumCulled = false;
-        scene.traverse( function( object ) { object.frustumCulled = false; } );
+        // scene.traverse( function( object ) { object.frustumCulled = false; } );
         
         
         // scene.traverse( (object) => { 
@@ -672,38 +681,7 @@
                 console.log(submarineMesh)
                 if (intersectedItem.name == "Bottle") {
 
-                    bottleMixer = new THREE.AnimationMixer(intersectedItem);
-                    let armature = submarineMesh.children.filter(item => item.name == "Armature")[0];
-                    console.log("armature")
-                    console.log(armature)
-                    console.log("intersecteditem")
-                    console.log(intersectedItem)
-                    armatureMixer = new THREE.AnimationMixer(armature);
 
-                    // console.log("mixer")
-                    // console.log(mixer)
-                    
-                    // console.log("submarineAnimations[1]")
-                    // console.log(submarineAnimations[1])
-                    
-                    // let nclip = THREE.AnimationUtils.subclip( submarineAnimations[1], 'BottleAction', 0, 100, 30);
-                    // let action = mixer.clipAction( nclip )
-                    let action = bottleMixer.clipAction( submarineAnimations[1] )
-                    
-                    // action.setLoop(THREE.LoopOnce);
-                    // action.clampWhenFinished = true;
-                    action.play();
-                    
-                    let action2 = armatureMixer.clipAction( submarineAnimations[0] )
-                    
-                    console.log("mixer")
-                    console.log(armatureMixer)
-                    
-                    console.log("submarineAnimations[0]")
-                    console.log(submarineAnimations[0])
-                    // action2.setLoop(THREE.LoopOnce);
-                    // action2.clampWhenFinished = true;
-                    action2.play();
                     // console.log("playing");
 
 
@@ -716,13 +694,43 @@
                 if (linkedObject) {
                     window.location.href = linkedObject.link;
                 } else if (itemClicked == -1) {
+
+                    if (intersectedItem.name == "Button") {
+                        
+                        humanAnimFinished = false;
+                        humanShown = true;
+
+                        humanAnimCurrentTime = 0;
+                        prevTime = performance.now() * 0.001;
+
+                        setScrollTop()
+
+                        
+                        let armature = submarineMesh.children.filter(item => item.name == "Armature")[0];
+                        armatureMixer = new THREE.AnimationMixer(armature);
+                        bottleMixer = new THREE.AnimationMixer(intersectedItem);
+
+                        let action0 = armatureMixer.clipAction( submarineAnimations[0] )
+                        action0.setLoop(THREE.LoopOnce);
+                        action0.clampWhenFinished = true;
+                        action0.play();
+                        
+                        let action1 = bottleMixer.clipAction( submarineAnimations[1] )
+                        action1.setLoop(THREE.LoopOnce);
+                        action1.clampWhenFinished = true;
+                        action1.play();
+
+                        
+                        return;
+
+                    }
+
                     itemClicked = submarineItems.indexOf(intersectedItem);
                     tvAnimFinished = false;
                     tvAnimCurrentTime = 0;
                     prevTime = performance.now() * 0.001;
 
-                    document.body.scrollTop = 0;
-                    document.documentElement.scrollTop = 0;
+                    setScrollTop()
                     
                 } else if (itemClicked != -1) {
                     tvAnimFinished = false;
@@ -730,8 +738,9 @@
                     tvAnimCurrentTime = 0;
                     prevTime = performance.now() * 0.001;
                     
-                    document.body.scrollTop = document.body.scrollHeight;
-                    document.documentElement.scrollTop = document.documentElement.scrollHeight;
+
+                    setScrollBottom()
+
                 }
 
             }
@@ -764,7 +773,7 @@
         const scrollProgress = Math.abs(t) / (mainHeight - windowHeight);
 
 
-        if (itemClicked == -1) {
+        if (itemClicked == -1 && !humanShown) {
 
             const sunPhase = Math.min(scrollProgress / sunPhasePercentage, 1);
     
@@ -871,7 +880,7 @@
             tvMesh.material.uniforms.scroll.value = 2;
 
             
-        } else {
+        } else if (itemClicked != -1 && !humanShown) {
             
             //item is clicked, display text on scroll
             tvMesh.material.uniforms.scroll.value = scrollProgress;
@@ -884,6 +893,9 @@
     let tvAnimFinished = true;
     let tvAnimTime = .5;
     let tvAnimCurrentTime = 0;
+    let humanAnimFinished = true;
+    let humanAnimTime = 1.5;
+    let humanAnimCurrentTime = 0;
     let prevTime = 0;
     function animate() {
         requestAnimationFrame(animate);
@@ -967,6 +979,35 @@
                 
                 tvAnimFinished = (itemClicked != -1) ? t == 1 : 1-t == 0;
             } 
+
+
+            if (!humanAnimFinished) {
+
+                let t = Math.min(1, humanAnimCurrentTime / humanAnimTime);
+                
+                let initial = cameraSubEnd.clone();
+                let final = (new Vector3(-.3, -.3, -.3)).add(initial).clone();
+                
+                let initialRot = cameraRotSubEnd.clone();
+                let finalRot = (new Vector3(0, Math.PI/4, 0)).add(initialRot).clone();
+                //^edit this to be correct rotation to look at human from side
+                
+                humanAnimCurrentTime += delta;
+                
+                camera.position.x = MathUtils.lerp(initial.x, final.x, (humanShown) ? t : 1-t);
+                camera.position.y = MathUtils.lerp(initial.y, final.y, (humanShown) ? t : 1-t);
+                camera.position.z = MathUtils.lerp(initial.z, final.z, (humanShown) ? t : 1-t);
+                
+                camera.rotation.x = MathUtils.lerp(initialRot.x, finalRot.x, (humanShown) ? t : 1-t);
+                camera.rotation.y = MathUtils.lerp(initialRot.y, finalRot.y, (humanShown) ? t : 1-t);
+                camera.rotation.z = MathUtils.lerp(initialRot.z, finalRot.z, (humanShown) ? t : 1-t);
+
+
+
+
+                humanAnimFinished = (humanShown) ? t == 1 : 1-t == 0;
+            } 
+
 
 
 
