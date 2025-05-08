@@ -74,7 +74,7 @@
 
             // console.log(submarineScene)
 
-
+            // console.log(gltf)
             // console.log("submarineAnimations")
             // console.log(submarineAnimations)
 
@@ -626,6 +626,10 @@
         //     if (object.name == "Armature") object.frustumCulled = false; 
         // });
 
+
+
+        submarineMesh.children.forEach((obj) => {if (obj.name=="Armature001") obj.visible=false;})
+
         console.log(scene);
 
 
@@ -709,6 +713,14 @@
                         let armature = submarineMesh.children.filter(item => item.name == "Armature")[0];
                         armatureMixer = new THREE.AnimationMixer(armature);
                         bottleMixer = new THREE.AnimationMixer(intersectedItem);
+
+                        armatureMixer.addEventListener("finished", () => {
+                            submarineMesh.children.forEach((obj) => {
+                                if (obj.name=="Armature001") obj.visible=true;
+                                if (obj.name=="Armature") obj.visible=false;
+                            })
+                            armatureMixer = null;
+                        })
 
                         let action0 = armatureMixer.clipAction( submarineAnimations[0] )
                         action0.setLoop(THREE.LoopOnce);
