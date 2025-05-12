@@ -22,7 +22,7 @@
     let controlsEnabled = false;
     let darknessEnabled = true;
 
-    const oceanDepth = 200;
+    const oceanDepth = 300;
     const sunPhasePercentage = 0.2;
     const oceanPhasePercentage = 0.5;
     const submarinePhasePercentage = 0.3;
@@ -72,12 +72,6 @@
             submarineScene = SkeletonUtils.clone(gltf.scene);
             submarineAnimations = gltf.animations.slice();
 
-            // console.log(submarineScene)
-
-            // console.log(gltf)
-            // console.log("submarineAnimations")
-            // console.log(submarineAnimations)
-
 
 
             loadedCount++;
@@ -99,8 +93,11 @@
 
 
     const title = "Microplastics";
-    const textDepths = [0.3, 0.6, 0.9];
-    const textLabels = ['30% Below Water', '60% Below Water', 'submarine'];
+    const textDepths = [0.25, 0.5, 0.75, 0.90];
+    const textLabels = ['Microplastics are small plastic \nparticles that come from the \ndegradation of plastics.', 
+                        'Primary microplastics are plastic \nparticles designed to be very \nsmall so that they can carry out \ntheir intended function.', 
+                        'Secondary microplastics are large \nplastic materials that could be \nused in packaging that get ground \ndown over time into microplastics.',
+                        'submarine'];
 
 
 
@@ -117,7 +114,11 @@
         if (this.isSubmarine) {
             this.mesh.position.x = this.initialX - (movePercent * 65);
         } else {
-            this.mesh.position.x = this.initialX - (movePercent * 400);
+
+            let funcMovePercent = Math.log((1.0/movePercent)-1.0)/-7.0 + 0.5;
+            funcMovePercent = (funcMovePercent>1) ? 1 : ((funcMovePercent < 0) ? 0 : funcMovePercent);
+
+            this.mesh.position.x = this.initialX - (funcMovePercent * 400);
 
             let newPos = this.mesh.position.clone();
             newPos.add(this.hitboxOffset);
@@ -260,36 +261,9 @@
         }
 
         
-        const shipGeometry = new BoxGeometry(100, 20, 75);
-        const shipMaterial = new MeshStandardMaterial({ 
-            color: 0x8B4513,
-            roughness: 0.8,
-            metalness: 0.2,
-            emissive: 0x8B4513,
-            emissiveIntensity: 0.2,
-            fog: false
-        });
-        const shipMesh = new Mesh(shipGeometry, shipMaterial);
-        
-        shipMesh.position.set(0, 5, -200);
-        scene.add(shipMesh);
-
-
-        floatingObjects.push({
-            mesh: shipMesh,
-            speed: 0.2,
-            initialX: shipMesh.position.x,
-            initialZ: shipMesh.position.z,
-            initialShipX: shipMesh.position.x,
-            initialShipZ: shipMesh.position.z,
-            movementOffset: 0,
-            isShip: true
-        });
-
-
         const textGeometry = new TextGeometry(title, {
             font: textFont,
-            size: 10,
+            size: 20,
             height: 1,
             curveSegments: 12,
             bevelEnabled: true,
@@ -301,38 +275,8 @@
         const textMaterial = new MeshStandardMaterial({ color: 0xffffff, fog:false });
         const titleMesh = new Mesh(textGeometry, textMaterial);
         
-        titleMesh.position.set(-30, 30, -150);
+        titleMesh.position.set(-75, 30, -150);
         scene.add(titleMesh);
-
-        floatingObjects.push({
-            mesh: titleMesh,
-            speed: 0.2,
-            initialX: titleMesh.position.x,
-            initialZ: titleMesh.position.z,
-            initialShipX: shipMesh.position.x,
-            initialShipZ: shipMesh.position.z,
-            movementOffset: 0,
-            isShip: true
-        });
-
-
-        const backdropGeometry = new BoxGeometry(120, 40, 1);
-        const backdropMaterial = new MeshStandardMaterial({ color: 0x000000, fog:false });
-        const backdropMesh = new Mesh(backdropGeometry, backdropMaterial);
-        
-        backdropMesh.position.set(-30, 30, -200);
-        scene.add(backdropMesh);
-        
-        floatingObjects.push({
-            mesh: backdropMesh,
-            speed: 0.2,
-            initialX: backdropMesh.position.x,
-            initialZ: backdropMesh.position.z,
-            initialShipX: shipMesh.position.x,
-            initialShipZ: shipMesh.position.z,
-            movementOffset: 0,
-            isShip: true
-        });
 
 
         const seabedItems = [];
@@ -446,7 +390,7 @@
                 submarineMesh = SkeletonUtils.clone(submarineScene);//group object
 
                 
-                submarineMesh.position.y = -oceanDepth * depth;
+                submarineMesh.position.y = -oceanDepth + 20;
                 submarineMesh.position.x = 50;
                 scene.add(submarineMesh);
 
@@ -469,18 +413,19 @@
                 size: 5,
                 height: 1,
                 curveSegments: 12,
-                bevelEnabled: true,
-                bevelThickness: 0.5,
-                bevelSize: 0.3,
-                bevelSegments: 5,
+                // bevelEnabled: true,
+                // bevelThickness: 0.5,
+                // bevelSize: 0.3,
+                // bevelSegments: 5,
             });
             const textMaterial = new MeshStandardMaterial({
-                color: 0xffffff,
+                color: 0x000000,
                 fog: false,
             });
             const textMesh = new Mesh(textGeometry, textMaterial);
 
             textMesh.position.set(200, -oceanDepth * depth, -50);
+            textMesh.scale.set(1, 1, 0.5)
             scene.add(textMesh);
 
             floatingObjects.push({
@@ -491,7 +436,7 @@
                 movementOffset: MathUtils.randFloat(0, Math.PI * 2),
                 depth: depth,
                 isFloatingText: true,
-                isLink: Math.random() < 1,//random link idk bro testing
+                isLink: Math.random() < 0,//random link idk bro testing
                 link: "https://www.nationalgeographic.com/environment/article/what-is-geothermal-energy",
                 updatePos: updatePosition,
                 hitboxOffset: (() => {
@@ -514,7 +459,7 @@
                     const hitboxMesh = new Mesh(hitboxGeometry, hitboxMaterial);
                     
                     hitboxMesh.position.copy(textMesh.position);
-                    scene.add(hitboxMesh);
+                    // scene.add(hitboxMesh);
 
                     return hitboxMesh;
 
@@ -616,21 +561,8 @@
 
 
 
-        //TODO: make armature not frustum culled to not disapear
-        // scene.frustumCulled = false;
-        // scene.traverse( function( object ) { object.frustumCulled = false; } );
-        
-        
-        // scene.traverse( (object) => { 
-        //     console.log(object)
-        //     if (object.name == "Armature") object.frustumCulled = false; 
-        // });
+        submarineMesh.children.forEach((obj) => {if (obj.name=="Armature001" || obj.name=="MaterialSphere") obj.visible=false;})
 
-
-
-        submarineMesh.children.forEach((obj) => {if (obj.name=="Armature001") obj.visible=false;})
-
-        console.log(scene);
 
 
 
@@ -682,16 +614,6 @@
                 
                 const intersectedItem = intersects[0].object;
                 const linkedObject = floatingObjects.find(obj => obj.hitbox === intersectedItem);
-                console.log(submarineMesh)
-                if (intersectedItem.name == "Bottle") {
-
-
-                    // console.log("playing");
-
-
-
-                    return;
-                }
 
 
                 
@@ -1002,7 +924,6 @@
                 
                 let initialRot = cameraRotSubEnd.clone();
                 let finalRot = (new Vector3(0, Math.PI/4, 0)).add(initialRot).clone();
-                //^edit this to be correct rotation to look at human from side
                 
                 humanAnimCurrentTime += delta;
                 
