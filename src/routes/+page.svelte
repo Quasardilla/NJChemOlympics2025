@@ -633,8 +633,9 @@
 
                         
                         let armature = submarineMesh.children.filter(item => item.name == "Armature")[0];
+                        let bottle = submarineMesh.children.filter(item => item.name == "Bottle")[0]
                         armatureMixer = new THREE.AnimationMixer(armature);
-                        bottleMixer = new THREE.AnimationMixer(intersectedItem);
+                        bottleMixer = new THREE.AnimationMixer(bottle);
 
                         armatureMixer.addEventListener("finished", () => {
                             submarineMesh.children.forEach((obj) => {
@@ -649,7 +650,8 @@
                         action0.clampWhenFinished = true;
                         action0.play();
                         
-                        let action1 = bottleMixer.clipAction( submarineAnimations[1] )
+                        console.log(submarineAnimations)
+                        let action1 = bottleMixer.clipAction( submarineAnimations[2] )
                         action1.setLoop(THREE.LoopOnce);
                         action1.clampWhenFinished = true;
                         action1.play();
@@ -920,7 +922,7 @@
                 let t = Math.min(1, humanAnimCurrentTime / humanAnimTime);
                 
                 let initial = cameraSubEnd.clone();
-                let final = (new Vector3(-.3, -.3, -.3)).add(initial).clone();
+                let final = (new Vector3(-.3, -.3, -.6)).add(initial).clone();
                 
                 let initialRot = cameraRotSubEnd.clone();
                 let finalRot = (new Vector3(0, Math.PI/4, 0)).add(initialRot).clone();
@@ -934,7 +936,6 @@
                 camera.rotation.x = MathUtils.lerp(initialRot.x, finalRot.x, (humanShown) ? t : 1-t);
                 camera.rotation.y = MathUtils.lerp(initialRot.y, finalRot.y, (humanShown) ? t : 1-t);
                 camera.rotation.z = MathUtils.lerp(initialRot.z, finalRot.z, (humanShown) ? t : 1-t);
-
 
 
 
