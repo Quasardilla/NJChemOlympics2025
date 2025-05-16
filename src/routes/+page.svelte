@@ -169,6 +169,7 @@
     let humanShown = false;
     let tvMesh = null;
     let tvButtonMesh = null;
+    let humanButtonMesh = null;
     let humanPlaneMesh = null;
     let raycaster = new Raycaster();
     let mouse = new Vector2();
@@ -497,7 +498,7 @@
         );
         outlinePass.edgeStrength = 5;
         outlinePass.edgeGlow = 0.5;
-        outlinePass.edgeThickness = 1.5;
+        outlinePass.edgeThickness = 3.5;
         outlinePass.pulsePeriod = 1.5;
         outlinePass.visibleEdgeColor.set(0xf7f387);
         outlinePass.hiddenEdgeColor.set(0x000000);
@@ -538,8 +539,8 @@
         const tvMaterial = new ShaderMaterial({
             uniforms: {
                 scroll: {value: 0},
-                text: { value: humanResearchTexture }, //{ value: tvTxtTexture },
-                height: { value: 0 }, //{ value: tvTxtTexture.source.data.naturalHeight }
+                text: { value: humanResearchTexture },
+                height: { value: humanResearchTexture.source.data.naturalHeight },
                 screenHeight: { value: 1200 }
             },
             vertexShader: `
@@ -614,12 +615,14 @@
 
 
         tvButtonMesh = submarineMesh.children.filter(item => item.name == "Button")[0];
+        humanButtonMesh = submarineMesh.children.filter(item => item.name == "Button2")[0];
 
 
 
         submarineMesh.children.forEach((obj) => {if (obj.name=="Armature001" || obj.name=="Plane001" || obj.name=="Plastic" || obj.name=="Water" || obj.name=="MaterialSphere") obj.visible=false;})
 
 
+        console.log(submarineMesh)
 
 
 
@@ -660,7 +663,8 @@
             submarineItems.forEach(item => {
                 items.push(item);
             });
-            items.push(tvButtonMesh);
+            if (itemClicked!=-1) items.push(tvButtonMesh);
+            else items.push(humanButtonMesh);
             
             
             const intersects = raycaster.intersectObjects(items);
@@ -677,7 +681,7 @@
                     window.location.href = linkedObject.link;
                 } else if (itemClicked == -1) {
 
-                    if (intersectedItem.name == "Button") {
+                    if (intersectedItem.name == "Button2") {
                         
                         humanAnimFinished = false;
                         humanShown = true;
@@ -968,6 +972,7 @@
             // const items = [];
             // submarineMesh.traverse((item) => {if (item.isMesh) items.push(item)});
             if (itemClicked != -1) items.push(tvButtonMesh);
+            else items.push(humanButtonMesh);
 
             const intersects = raycaster.intersectObjects(items);
 
