@@ -31,13 +31,16 @@
 
 
     let loadedCount = 0;
-    const MAX_LOADED = 6; // 3 solar flare pngs, 1 font, 1 submarine glb, 1 tv text texture png, 
+    const MAX_LOADED = 9; // 3 solar flare pngs, 1 font, 1 submarine glb, 4 research images (bag, bottle, disk, human)
 
     let submarineScene = null;
     let submarineAnimations = null;
     let lensflare = null;
     let textFont = null;
-    let tvTxtTexture = null
+    let bagResearchTexture = null;
+    let bottleResearchTexture = null;
+    let diskResearchTexture = null;
+    let humanResearchTexture = null;
     function loadStuff() {
         
         const gltfLoader = new GLTFLoader();
@@ -46,9 +49,9 @@
 
         lensflare = new Lensflare();
         const flareTextures = [
-            { texture: "/img/solar/mainFlare.png", size: 450, strength: 0.2, color: new Color(0x856319) },
-            { texture: "/img/solar/orangeFlareM.png", size: 128, strength: 0.3, color: new Color(0x856319) },
-            { texture: "/img/solar/orangeFlareS.png", size: 64, strength: 0.4, color: new Color(0x856319) }
+            { texture: "/img/flares/mainFlare.png", size: 450, strength: 0.2, color: new Color(0x856319) },
+            { texture: "/img/flares/orangeFlareM.png", size: 128, strength: 0.3, color: new Color(0x856319) },
+            { texture: "/img/flares/orangeFlareS.png", size: 64, strength: 0.4, color: new Color(0x856319) }
         ];
 
    
@@ -77,9 +80,20 @@
             loadedCount++;
         });
         
-        textureLoader.load('/img/research.png', (texture) => {
-        // textureLoader.load('/img/geo/rockbanner.png', (texture) => {
-            tvTxtTexture = texture;
+        textureLoader.load('/img/research/Bag.png', (texture) => {
+            bagResearchTexture = texture;
+            loadedCount++;
+        });
+        textureLoader.load('/img/research/Bottle.png', (texture) => {
+            bottleResearchTexture = texture;
+            loadedCount++;
+        });
+        textureLoader.load('/img/research/Disk.png', (texture) => {
+            diskResearchTexture = texture;
+            loadedCount++;
+        });
+        textureLoader.load('/img/research/human.png', (texture) => {
+            humanResearchTexture = texture;
             loadedCount++;
         });
 
@@ -155,6 +169,7 @@
     let humanShown = false;
     let tvMesh = null;
     let tvButtonMesh = null;
+    let humanPlaneMesh = null;
     let raycaster = new Raycaster();
     let mouse = new Vector2();
     const scene = new Scene();
@@ -523,8 +538,8 @@
         const tvMaterial = new ShaderMaterial({
             uniforms: {
                 scroll: {value: 0},
-                text: { value: tvTxtTexture },
-                height: { value: tvTxtTexture.source.data.naturalHeight },
+                text: { value: humanResearchTexture }, //{ value: tvTxtTexture },
+                height: { value: 0 }, //{ value: tvTxtTexture.source.data.naturalHeight }
                 screenHeight: { value: 1200 }
             },
             vertexShader: `
@@ -556,14 +571,53 @@
         tvMesh = new Mesh(tvGeometry, tvMaterial);
         scene.add(tvMesh);
 
+        const planeMaterial = new ShaderMaterial({
+            uniforms: {
+                scroll: {value: 0},
+                text: { value: humanResearchTexture },
+                height: { value: humanResearchTexture.source.data.naturalHeight },
+                screenHeight: { value: 1200 }
+            },
+            vertexShader: `
+                varying vec2 vUv;
+                void main() {
+                    vUv = uv;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                }
+            `,
+            fragmentShader: `
+                uniform sampler2D text;
+                uniform float scroll;
+                uniform float height;
+                uniform float screenHeight;
+                varying vec2 vUv;
+                void main() {
+                    vec2 nvUv = vec2(vUv.y, ((1.0-scroll)*height + vUv.x*screenHeight)/(height+screenHeight));
+                    vec4 color = texture2D(text, nvUv);
+                    if (nvUv.y > 1.0) {
+                        gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+                    } else {
+                        gl_FragColor = vec4(color.xyz, 1.0);
+                    }
+                }
+            `,
+            transparent: true
+        });
+
+
+
+
+        submarineMesh.children.forEach((obj) => {if (obj.name=="Plane001") {humanPlaneMesh = obj}})
+
+        humanPlaneMesh.material=planeMaterial;
+        humanPlaneMesh.rotation.y+=Math.PI;//
+
 
         tvButtonMesh = submarineMesh.children.filter(item => item.name == "Button")[0];
 
 
 
-        submarineMesh.children.forEach((obj) => {if (obj.name=="Armature001" || obj.name=="MaterialSphere") obj.visible=false;})
-
-
+        submarineMesh.children.forEach((obj) => {if (obj.name=="Armature001" || obj.name=="Plane001" || obj.name=="Plastic" || obj.name=="Water" || obj.name=="MaterialSphere") obj.visible=false;})
 
 
 
@@ -573,6 +627,8 @@
 
     let bottleMixer = null;
     let armatureMixer = null;
+    let plasticMixer = null;
+    let waterMixer = null;
     function addFunctions() {
         window.addEventListener('keyup', (event) => {
 
@@ -634,15 +690,31 @@
                         
                         let armature = submarineMesh.children.filter(item => item.name == "Armature")[0];
                         let bottle = submarineMesh.children.filter(item => item.name == "Bottle")[0]
+                        let plastic = submarineMesh.children.filter(item => item.name == "Plastic")[0]
+                        let water = submarineMesh.children.filter(item => item.name == "Water")[0]
                         armatureMixer = new THREE.AnimationMixer(armature);
                         bottleMixer = new THREE.AnimationMixer(bottle);
+                        plasticMixer = new THREE.AnimationMixer(plastic);
+                        waterMixer = new THREE.AnimationMixer(water);
 
                         armatureMixer.addEventListener("finished", () => {
                             submarineMesh.children.forEach((obj) => {
-                                if (obj.name=="Armature001") obj.visible=true;
+                                if (obj.name=="Armature001" || obj.name=="Plastic" || obj.name=="Water" || obj.name=="Plane001") obj.visible=true;
                                 if (obj.name=="Armature") obj.visible=false;
                             })
                             armatureMixer = null;
+
+                            let action3 = plasticMixer.clipAction( submarineAnimations[3] )
+                            action3.setLoop(THREE.LoopOnce);
+                            action3.clampWhenFinished = true;
+                            action3.play();
+                            
+                            let action4 = waterMixer.clipAction( submarineAnimations[4] )
+                            action4.setLoop(THREE.LoopOnce);
+                            action4.clampWhenFinished = true;
+                            action4.play();
+
+
                         })
 
                         let action0 = armatureMixer.clipAction( submarineAnimations[0] )
@@ -662,6 +734,20 @@
                     }
 
                     itemClicked = submarineItems.indexOf(intersectedItem);
+
+                    //-1 = nothing clicked, 0 = bag, 1 = bottle, 2 = disk
+                    if (itemClicked==0) {
+                        tvMesh.material.uniforms.text.value = bagResearchTexture;
+                        tvMesh.material.uniforms.height.value = bagResearchTexture.source.data.naturalHeight;
+                    } else if (itemClicked==1) {
+                        tvMesh.material.uniforms.text.value = bottleResearchTexture;
+                        tvMesh.material.uniforms.height.value = bottleResearchTexture.source.data.naturalHeight;
+                    } else if (itemClicked==2) {
+                        tvMesh.material.uniforms.text.value = diskResearchTexture;
+                        tvMesh.material.uniforms.height.value = diskResearchTexture.source.data.naturalHeight;
+                    }
+
+
                     tvAnimFinished = false;
                     tvAnimCurrentTime = 0;
                     prevTime = performance.now() * 0.001;
@@ -820,7 +906,9 @@
             
             //item is clicked, display text on scroll
             tvMesh.material.uniforms.scroll.value = scrollProgress;
-
+            
+        } else if (itemClicked == -1 && humanShown) {
+            humanPlaneMesh.material.uniforms.scroll.value = scrollProgress;
         }
 
 
@@ -852,6 +940,8 @@
 
             if (bottleMixer) bottleMixer.update(delta);
             if (armatureMixer) armatureMixer.update(delta);
+            if (plasticMixer) plasticMixer.update(delta);
+            if (waterMixer) waterMixer.update(delta);
 
 
             oceanMaterial.uniforms.time.value = time;
@@ -870,9 +960,11 @@
            
            
             const items = floatingObjects.map(obj => (obj.isFloatingText && obj.isLink) ? obj.hitbox : null).filter(Boolean);
-            submarineItems.forEach(item => {
-                items.push(item);
-            });
+            if (!humanShown){
+                submarineItems.forEach(item => {
+                    items.push(item);
+                });
+            }
             // const items = [];
             // submarineMesh.traverse((item) => {if (item.isMesh) items.push(item)});
             if (itemClicked != -1) items.push(tvButtonMesh);
