@@ -593,12 +593,18 @@
                 uniform float screenHeight;
                 varying vec2 vUv;
                 void main() {
-                    vec2 nvUv = vec2(vUv.y, ((1.0-scroll)*height + vUv.x*screenHeight)/(height+screenHeight));
+                    float threshold = 1.0;
+                    float calcScroll = (scroll > threshold) ? 1.0 : scroll/threshold;
+                    vec2 nvUv = vec2(vUv.y, ((1.0-calcScroll)*height + vUv.x*screenHeight)/(height+screenHeight));
                     vec4 color = texture2D(text, nvUv);
+                    //if scroll>0.9 then scroll out the opacity
+                    if (scroll > threshold) {
+                        color.a = 1.0 - (((scroll/1.2)-0.9)/0.1);
+                    }
                     if (nvUv.y > 1.0) {
                         gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
                     } else {
-                        gl_FragColor = vec4(color.xyz, 1.0);
+                        gl_FragColor = vec4(color.xyz, color.a);
                     }
                 }
             `,
@@ -675,23 +681,33 @@
                 const intersectedItem = intersects[0].object;
                 const linkedObject = floatingObjects.find(obj => obj.hitbox === intersectedItem);
 
-
+                console.log(intersects)
                 
                 if (linkedObject) {
                     window.location.href = linkedObject.link;
-                } else if (itemClicked == -1 && !humanShown) {
+                } else if (itemClicked == -1) {
 
                     if (intersectedItem.name == "Button2") {
                         
+                        console.log("human button clicked");
+
                         humanAnimFinished = false;
-                        humanShown = true;
+                        humanShown = !humanShown;
 
                         humanAnimCurrentTime = 0;
                         prevTime = performance.now() * 0.001;
 
-                        setScrollTop()
+                        if (humanShown) setScrollTop()
+                        else setScrollBottom()
 
                         
+                        if (!humanShown) {
+                            submarineMesh.children.forEach((obj) => {
+                                if (obj.name=="Armature001" || obj.name=="Plastic" || obj.name=="Water" || obj.name=="Plane001") obj.visible=false;
+                                if (obj.name=="Armature") obj.visible=true;
+                            })
+                        }
+
                         let armature = submarineMesh.children.filter(item => item.name == "Armature")[0];
                         let bottle = submarineMesh.children.filter(item => item.name == "Bottle")[0]
                         let plastic = submarineMesh.children.filter(item => item.name == "Plastic")[0]
@@ -702,41 +718,59 @@
                         waterMixer = new THREE.AnimationMixer(water);
 
                         armatureMixer.addEventListener("finished", () => {
-                            submarineMesh.children.forEach((obj) => {
-                                if (obj.name=="Armature001" || obj.name=="Plastic" || obj.name=="Water" || obj.name=="Plane001") obj.visible=true;
-                                if (obj.name=="Armature") obj.visible=false;
-                            })
-                            armatureMixer = null;
+                            if (humanShown) {
+                                submarineMesh.children.forEach((obj) => {
+                                    if (obj.name=="Armature001" || obj.name=="Plastic" || obj.name=="Water" || obj.name=="Plane001") obj.visible=true;
+                                    if (obj.name=="Armature") obj.visible=false;
+                                })
 
-                            let action3 = plasticMixer.clipAction( submarineAnimations[3] )
-                            action3.setLoop(THREE.LoopOnce);
-                            action3.clampWhenFinished = true;
-                            action3.play();
-
+                                armatureMixer = null;
+    
+                                let action3 = plasticMixer.clipAction( submarineAnimations[3] )
+                                action3.reset();
+                                action3.setLoop(THREE.LoopOnce);
+                                action3.clampWhenFinished = true;
+                                action3.play();
+                                
+                                
+                                let action4 = waterMixer.clipAction( submarineAnimations[4] )
+                                action4.reset();
+                                action4.setLoop(THREE.LoopOnce);
+                                action4.clampWhenFinished = true;
+                                action4.play();
+                            }
                             
-                            let action4 = waterMixer.clipAction( submarineAnimations[4] )
-                            action4.setLoop(THREE.LoopOnce);
-                            action4.clampWhenFinished = true;
-                            action4.play();
-
-
+                            
                         })
-
+                        
                         let action0 = armatureMixer.clipAction( submarineAnimations[0] )
+                        if (humanShown)action0.reset();
+                        if (!humanShown) action0.time = submarineAnimations[0].duration;
+                        if (!humanShown) action0.paused = false;
+                        if (!humanShown) action0.timeScale = -1; else action0.timeScale = 1;
                         action0.setLoop(THREE.LoopOnce);
                         action0.clampWhenFinished = true;
+                        if (!humanShown) action0.enabled = true;
                         action0.play();
-
-
+                        
                         
                         let action1 = bottleMixer.clipAction( submarineAnimations[2] )
+                        if (humanShown) action1.reset();
+                        if (!humanShown) action1.time = submarineAnimations[2].duration;
+                        if (!humanShown) action1.paused = false;
+                        if (!humanShown) action1.timeScale = -1; else action1.timeScale = 1;
+                        if (!humanShown) action1.enabled = true;
                         action1.setLoop(THREE.LoopOnce);
                         action1.clampWhenFinished = true;
                         action1.play();
-
+                        
                         
                         return;
 
+                    }
+
+                    if (humanShown) {
+                        return;
                     }
 
                     itemClicked = submarineItems.indexOf(intersectedItem);
@@ -914,7 +948,7 @@
             tvMesh.material.uniforms.scroll.value = scrollProgress;
             
         } else if (itemClicked == -1 && humanShown) {
-            humanPlaneMesh.material.uniforms.scroll.value = scrollProgress;
+            humanPlaneMesh.material.uniforms.scroll.value = scrollProgress*1.2;
         }
 
 
@@ -978,23 +1012,29 @@
 
             const intersects = raycaster.intersectObjects(items);
 
-
+            let planeScroll =  humanPlaneMesh.material.uniforms.scroll.value;
 
             if (intersects.length > 0) {
                 const intersectedItem = intersects[0].object;
                 composer.passes[1].selectedObjects = [intersectedItem];
 
                 composer.passes[1].visibleEdgeColor.set(0xffffff);
+                if (humanShown && planeScroll>=1.0) composer.passes[1].hiddenEdgeColor.set(0xffffff);
+                else composer.passes[1].hiddenEdgeColor.set(0x000000);
                 composer.passes[1].pulsePeriod = 0;
             } else if (itemClicked != -1) {
                 composer.passes[1].selectedObjects = [tvButtonMesh];
 
                 composer.passes[1].visibleEdgeColor.set(0x0062ff);
+                if (humanShown && planeScroll>=1.0) composer.passes[1].hiddenEdgeColor.set(0x0062ff);
+                else composer.passes[1].hiddenEdgeColor.set(0x000000);
                 composer.passes[1].pulsePeriod = 1.5;
             } else {
                 composer.passes[1].selectedObjects = items;
 
                 composer.passes[1].visibleEdgeColor.set(0x0062ff);
+                if (humanShown && planeScroll>=1.0) composer.passes[1].hiddenEdgeColor.set(0x0062ff);
+                else composer.passes[1].hiddenEdgeColor.set(0x000000);
                 composer.passes[1].pulsePeriod = 1.5;
             }
 
