@@ -227,7 +227,7 @@
 
 
         floatingObjects = [];
-        const numObjects = 10;
+        const numObjects = 50;
         for (let i = 0; i < numObjects; i++) {
             
             const turtleGeometry = new SphereGeometry(1, 8, 8);
@@ -236,7 +236,7 @@
 
             turtle.position.set(
                 MathUtils.randFloatSpread(100),
-                MathUtils.randFloatSpread(40) - 25,
+                MathUtils.randFloatSpread(oceanDepth-50) - oceanDepth/2,
                 MathUtils.randFloatSpread(100)
             );
 
@@ -260,7 +260,7 @@
 
             plastic.position.set(
                 MathUtils.randFloatSpread(100),
-                MathUtils.randFloatSpread(40) - 25,
+                MathUtils.randFloatSpread(oceanDepth-50) - oceanDepth/2,
                 MathUtils.randFloatSpread(100)
             );
 
@@ -496,7 +496,7 @@
             scene,
             camera
         );
-        outlinePass.edgeStrength = 5;
+        outlinePass.edgeStrength = 7;
         outlinePass.edgeGlow = 0.5;
         outlinePass.edgeThickness = 3.5;
         outlinePass.pulsePeriod = 1.5;
@@ -611,7 +611,8 @@
         submarineMesh.children.forEach((obj) => {if (obj.name=="Plane001") {humanPlaneMesh = obj}})
 
         humanPlaneMesh.material=planeMaterial;
-        humanPlaneMesh.rotation.y+=Math.PI;//
+        humanPlaneMesh.rotation.y+=Math.PI;
+        humanPlaneMesh.scale.y = 0.001;
 
 
         tvButtonMesh = submarineMesh.children.filter(item => item.name == "Button")[0];
@@ -622,7 +623,6 @@
         submarineMesh.children.forEach((obj) => {if (obj.name=="Armature001" || obj.name=="Plane001" || obj.name=="Plastic" || obj.name=="Water" || obj.name=="MaterialSphere") obj.visible=false;})
 
 
-        console.log(submarineMesh)
 
 
 
@@ -679,7 +679,7 @@
                 
                 if (linkedObject) {
                     window.location.href = linkedObject.link;
-                } else if (itemClicked == -1) {
+                } else if (itemClicked == -1 && !humanShown) {
 
                     if (intersectedItem.name == "Button2") {
                         
@@ -712,6 +712,7 @@
                             action3.setLoop(THREE.LoopOnce);
                             action3.clampWhenFinished = true;
                             action3.play();
+
                             
                             let action4 = waterMixer.clipAction( submarineAnimations[4] )
                             action4.setLoop(THREE.LoopOnce);
@@ -725,8 +726,9 @@
                         action0.setLoop(THREE.LoopOnce);
                         action0.clampWhenFinished = true;
                         action0.play();
+
+
                         
-                        console.log(submarineAnimations)
                         let action1 = bottleMixer.clipAction( submarineAnimations[2] )
                         action1.setLoop(THREE.LoopOnce);
                         action1.clampWhenFinished = true;
