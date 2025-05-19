@@ -28,6 +28,7 @@
     const submarinePhasePercentage = 0.3;
 
     const scrollWindowHeight = 5_000;
+    const smallScrollWindowHeight = 3_000;
 
 
     let loadedCount = 0;
@@ -230,38 +231,42 @@
         const numObjects = 50;
         for (let i = 0; i < numObjects; i++) {
             
-            const turtleGeometry = new SphereGeometry(1, 8, 8);
-            const turtleMaterial = new MeshStandardMaterial({ color: 0x2d5a27 });
-            const turtle = new Mesh(turtleGeometry, turtleMaterial);
+            // const turtleGeometry = new SphereGeometry(1, 8, 8);
+            // const turtleMaterial = new MeshStandardMaterial({ color: 0x2d5a27 });
+            // const turtle = new Mesh(turtleGeometry, turtleMaterial);
 
-            turtle.position.set(
-                MathUtils.randFloatSpread(100),
-                MathUtils.randFloatSpread(oceanDepth-50) - oceanDepth/2,
-                MathUtils.randFloatSpread(100)
-            );
+            // turtle.position.set(
+            //     MathUtils.randFloatSpread(100),
+            //     MathUtils.randFloatSpread(oceanDepth-50) - oceanDepth/2,
+            //     MathUtils.randFloatSpread(100)
+            // );
 
-            scene.add(turtle);
+            // scene.add(turtle);
 
-            floatingObjects.push({
-                mesh: turtle,
-                speed: MathUtils.randFloat(0.1, 0.3),
-                initialX: turtle.position.x,
-                initialZ: turtle.position.z,
-                movementOffset: MathUtils.randFloat(0, Math.PI * 2)
-            });
+            // floatingObjects.push({
+            //     mesh: turtle,
+            //     speed: MathUtils.randFloat(0.1, 0.3),
+            //     initialX: turtle.position.x,
+            //     initialZ: turtle.position.z,
+            //     movementOffset: MathUtils.randFloat(0, Math.PI * 2)
+            // });
 
-            const plasticGeometry = new BoxGeometry(1, 1, 1);
+            const plasticGeometry = new BoxGeometry(MathUtils.randFloat(0.5, 3), 0.2, MathUtils.randFloat(0.5, 3));
             const plasticMaterial = new MeshStandardMaterial({ 
-                color: 0xff0000,
+                color: new THREE.Color().setHSL(Math.random(), 0.25, 0.69),
                 roughness: 0.5,
                 metalness: 0.5
             });
             const plastic = new Mesh(plasticGeometry, plasticMaterial);
 
+            plastic.rotation.x = MathUtils.randFloat(0, Math.PI);
+            plastic.rotation.y = MathUtils.randFloat(0, Math.PI);
+            plastic.rotation.z = MathUtils.randFloat(0, Math.PI);
+
             plastic.position.set(
                 MathUtils.randFloatSpread(100),
                 MathUtils.randFloatSpread(oceanDepth-50) - oceanDepth/2,
-                MathUtils.randFloatSpread(100)
+                MathUtils.randFloatSpread(100)-50
             );
 
             scene.add(plastic);
@@ -296,12 +301,12 @@
 
 
         const seabedItems = [];
-        const numSeabedItems = 20;
+        const numSeabedItems = 50;
         for (let i = 0; i < numSeabedItems; i++) {
 
-            const itemGeometry = new BoxGeometry(2, 2, 2);
+            const itemGeometry = new BoxGeometry(MathUtils.randFloat(0.5, 3), 0.2, MathUtils.randFloat(0.5, 3));
             const itemMaterial = new MeshStandardMaterial({ 
-                color: 0xff0000,
+                color: new THREE.Color().setHSL(Math.random(), 0.25, 0.69),
                 roughness: 0.8,
                 metalness: 0.2
             });
@@ -792,14 +797,17 @@
                     tvAnimCurrentTime = 0;
                     prevTime = performance.now() * 0.001;
 
+                    document.getElementById("scroll-window").style.height = smallScrollWindowHeight + "px";
+
                     setScrollTop()
                     
-                } else if (itemClicked != -1) {
+                } else if (itemClicked != -1 && intersectedItem.name == "Button") {
                     tvAnimFinished = false;
                     itemClicked = -1;
                     tvAnimCurrentTime = 0;
                     prevTime = performance.now() * 0.001;
                     
+                    document.getElementById("scroll-window").style.height = scrollWindowHeight + "px";
 
                     setScrollBottom()
 
@@ -1000,7 +1008,7 @@
            
            
             const items = floatingObjects.map(obj => (obj.isFloatingText && obj.isLink) ? obj.hitbox : null).filter(Boolean);
-            if (!humanShown){
+            if (!humanShown && itemClicked == -1) {
                 submarineItems.forEach(item => {
                     items.push(item);
                 });
