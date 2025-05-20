@@ -632,14 +632,17 @@
     function addFunctions() {
         window.addEventListener('keyup', (event) => {
 
-            if (event.key === 'p') {
+            if (event.key === '[') {
 
                 controlsEnabled = !controlsEnabled;
                 controls.enabled = controlsEnabled;
 
                 if (!controlsEnabled) window.location.reload();
                 
+            } else if (event.key === ']') {
+                darknessEnabled = !darknessEnabled;
             }
+
 
         });
 
