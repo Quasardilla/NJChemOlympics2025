@@ -22,13 +22,13 @@
     let controlsEnabled = false;
     let darknessEnabled = true;
 
-    const oceanDepth = 300;
+    const oceanDepth = 400;
     const sunPhasePercentage = 0.2;
     const oceanPhasePercentage = 0.5;
     const submarinePhasePercentage = 0.3;
 
     const scrollWindowHeight = 5_000;
-    const smallScrollWindowHeight = 3_000;
+    const smallScrollWindowHeight = 2_000;
 
 
     let loadedCount = 0;
@@ -108,11 +108,14 @@
 
 
     const title = "Microplastics";
-    const textDepths = [0.25, 0.5, 0.75, 0.90];
-    const textLabels = ['Microplastics are small plastic \nparticles that come from the \ndegradation of plastics.', 
-                        'Primary microplastics are plastic \nparticles designed to be very \nsmall so that they can carry out \ntheir intended function.', 
-                        'Secondary microplastics are large \nplastic materials that could be \nused in packaging that get ground \ndown over time into microplastics.',
+    const textDepths = [0.15, 0.3, 0.45, 0.6, 0.75, 0.90];
+    const textLabels = ['What are microplastics & \nHow are they formed?',
+                        'Microplastics are small plastic \nparticles that come from the \ndegradation of plastics \n(Shemitz & Anastas, 2020).', 
+                        ' - Primary microplastics are plastic particles \ndesigned to be very small so that \nthey can carry out their intended function. \n\n    Ex: small spheres found in exfoliating \nface washes or as fine powder in toothpaste',
+                        ' - Secondary microplastics are “large plastic \nmaterials that could be used in packaging \nor building materials that just get ground \ndown over time, either through abrasion, \nwind, or sun rays, and become microplastics \n(Shemitz & Anastas, 2020).',
+                        '     Ex: Plastic bags, bottles, food containers, \npaints, adhesives Secondary microplastics are \nfragmented macro- or mesoplastic products, \nmainly caused by various environmental processes: \nbiodegradation, photo-degradation, thermo-oxidative \ndegradation, thermal degradation, and hydrolysis \n(Ziani, 2023).',
                         'submarine'];
+    const textSizes = [8, 5, 4, 3.5, 3.5];
 
 
 
@@ -231,26 +234,6 @@
         const numObjects = 50;
         for (let i = 0; i < numObjects; i++) {
             
-            // const turtleGeometry = new SphereGeometry(1, 8, 8);
-            // const turtleMaterial = new MeshStandardMaterial({ color: 0x2d5a27 });
-            // const turtle = new Mesh(turtleGeometry, turtleMaterial);
-
-            // turtle.position.set(
-            //     MathUtils.randFloatSpread(100),
-            //     MathUtils.randFloatSpread(oceanDepth-50) - oceanDepth/2,
-            //     MathUtils.randFloatSpread(100)
-            // );
-
-            // scene.add(turtle);
-
-            // floatingObjects.push({
-            //     mesh: turtle,
-            //     speed: MathUtils.randFloat(0.1, 0.3),
-            //     initialX: turtle.position.x,
-            //     initialZ: turtle.position.z,
-            //     movementOffset: MathUtils.randFloat(0, Math.PI * 2)
-            // });
-
             const plasticGeometry = new BoxGeometry(MathUtils.randFloat(0.5, 3), 0.2, MathUtils.randFloat(0.5, 3));
             const plasticMaterial = new MeshStandardMaterial({ 
                 color: new THREE.Color().setHSL(Math.random(), 0.25, 0.69),
@@ -431,7 +414,7 @@
 
             const textGeometry = new TextGeometry(textLabels[index], {
                 font: textFont,
-                size: 5,
+                size: textSizes[index],
                 height: 1,
                 curveSegments: 12,
                 // bevelEnabled: true,
@@ -631,7 +614,10 @@
 
 
 
-        submarineMesh.children.forEach((obj) => {if (obj.name=="Armature001" || obj.name=="Plane001" || obj.name=="Plastic" || obj.name=="Water" || obj.name=="MaterialSphere") obj.visible=false;})
+        submarineMesh.children.forEach((obj) => {
+            if (obj.name=="Armature001" || obj.name=="Plane001" || obj.name=="Plastic" || obj.name=="Water" || obj.name=="MaterialSphere") obj.visible=false;
+            if (obj.name=="Armature") obj.traverse( (object) => {object.frustumCulled = false});
+        })
 
 
 
@@ -784,12 +770,15 @@
                     if (itemClicked==0) {
                         tvMesh.material.uniforms.text.value = bagResearchTexture;
                         tvMesh.material.uniforms.height.value = bagResearchTexture.source.data.naturalHeight;
+                        tvMesh.material.uniforms.screenHeight.value = 2500;
                     } else if (itemClicked==1) {
                         tvMesh.material.uniforms.text.value = bottleResearchTexture;
                         tvMesh.material.uniforms.height.value = bottleResearchTexture.source.data.naturalHeight;
+                        tvMesh.material.uniforms.screenHeight.value = 2500;
                     } else if (itemClicked==2) {
                         tvMesh.material.uniforms.text.value = diskResearchTexture;
                         tvMesh.material.uniforms.height.value = diskResearchTexture.source.data.naturalHeight;
+                        tvMesh.material.uniforms.screenHeight.value = 2500;
                     }
 
 
